@@ -35,6 +35,7 @@ public class SQLiteHelper extends SQLiteOpenHelper {
 	public void onCreate(SQLiteDatabase db) {
 		db.execSQL(CREATE_RECORDS_TABLE_SCRIPT);
 		db.execSQL(CREATE_TRASH_TABLE_SCRIPT);
+		db.execSQL(CREATE_TIMESTAMPS_TABLE_SCRIPT);
 	}
 
 	@Override
@@ -81,16 +82,19 @@ public class SQLiteHelper extends SQLiteOpenHelper {
 
 			db.setTransactionSuccessful();
 			db.endTransaction();
+		} else if (oldVersion == 3 && newVersion == 4) {
+			db.execSQL(CREATE_TIMESTAMPS_TABLE_SCRIPT);
 		}
 	}
 
 
 	private static final String DATABASE_NAME = "records.db";
-	private static final int DATABASE_VERSION = 3;
+	private static final int DATABASE_VERSION = 4;
 
 	//Tables names
 	static final String TABLE_RECORDS = "records";
 	static final String TABLE_TRASH = "trash";
+	static final String TABLE_TIMESTAMPS = "timestamps";
 
 	//Fields for table Records
 	static final String COLUMN_ID = "_id";
@@ -111,6 +115,14 @@ public class SQLiteHelper extends SQLiteOpenHelper {
 	static final String COLUMN_CHANNEL_COUNT = "channel_count";
 	static final String COLUMN_BITRATE = "bitrate";
 
+	//Fields for table Timestamps
+	static final String COLUMN_TIMESTAMP_ID = "_id";
+	static final String COLUMN_RECORD_ID = "record_id";
+	static final String COLUMN_TIME_MILLIS = "time_millis";
+	static final String COLUMN_DESCRIPTION = "description";
+	static final String COLUMN_CREATED_AT = "created_at";
+	static final String COLUMN_UPDATED_AT = "updated_at";
+
 	//Create records table sql statement
 	private static final String CREATE_RECORDS_TABLE_SCRIPT =
 			"CREATE TABLE " + TABLE_RECORDS + " ("
@@ -129,6 +141,17 @@ public class SQLiteHelper extends SQLiteOpenHelper {
 					+ COLUMN_BOOKMARK + " INTEGER NOT NULL DEFAULT 0, "
 					+ COLUMN_WAVEFORM_PROCESSED + " INTEGER NOT NULL DEFAULT 0, "
 					+ COLUMN_DATA_STR + " BLOB NOT NULL);";
+
+	//Create timestamps table sql statement
+	private static final String CREATE_TIMESTAMPS_TABLE_SCRIPT =
+			"CREATE TABLE " + TABLE_TIMESTAMPS + " ("
+					+ COLUMN_TIMESTAMP_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+					+ COLUMN_RECORD_ID + " INTEGER NOT NULL, "
+					+ COLUMN_TIME_MILLIS + " LONG NOT NULL, "
+					+ COLUMN_DESCRIPTION + " TEXT NOT NULL DEFAULT '', "
+					+ COLUMN_CREATED_AT + " LONG NOT NULL, "
+					+ COLUMN_UPDATED_AT + " LONG NOT NULL, "
+					+ "FOREIGN KEY(" + COLUMN_RECORD_ID + ") REFERENCES " + TABLE_RECORDS + "(" + COLUMN_ID + ") ON DELETE CASCADE);";
 
 	//Create trash table sql statement
 	private static final String CREATE_TRASH_TABLE_SCRIPT =

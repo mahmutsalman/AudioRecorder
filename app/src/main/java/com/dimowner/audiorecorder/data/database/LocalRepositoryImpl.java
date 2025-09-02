@@ -62,6 +62,8 @@ public class LocalRepositoryImpl implements LocalRepository {
 
 	private final TrashDataSource trashDataSource;
 
+	private final TimestampDataSource timestampDataSource;
+
 	private final FileRepository fileRepository;
 
 	private final Prefs prefs;
@@ -70,18 +72,19 @@ public class LocalRepositoryImpl implements LocalRepository {
 
 	private OnRecordsLostListener onLostRecordsListener;
 
-	private LocalRepositoryImpl(RecordsDataSource dataSource, TrashDataSource trashDataSource, FileRepository fileRepository, Prefs prefs) {
+	private LocalRepositoryImpl(RecordsDataSource dataSource, TrashDataSource trashDataSource, TimestampDataSource timestampDataSource, FileRepository fileRepository, Prefs prefs) {
 		this.dataSource = dataSource;
 		this.trashDataSource = trashDataSource;
+		this.timestampDataSource = timestampDataSource;
 		this.fileRepository = fileRepository;
 		this.prefs = prefs;
 	}
 
-	public static LocalRepositoryImpl getInstance(RecordsDataSource source, TrashDataSource trashSource, FileRepository fileRepository, Prefs prefs) {
+	public static LocalRepositoryImpl getInstance(RecordsDataSource source, TrashDataSource trashSource, TimestampDataSource timestampSource, FileRepository fileRepository, Prefs prefs) {
 		if (instance == null) {
 			synchronized (LocalRepositoryImpl.class) {
 				if (instance == null) {
-					instance = new LocalRepositoryImpl(source, trashSource, fileRepository, prefs);
+					instance = new LocalRepositoryImpl(source, trashSource, timestampSource, fileRepository, prefs);
 					instance.removeOutdatedTrashRecords();
 				}
 			}
@@ -567,5 +570,62 @@ public class LocalRepositoryImpl implements LocalRepository {
 	@Override
 	public void setOnRecordsLostListener(OnRecordsLostListener onLostRecordsListener) {
 		this.onLostRecordsListener = onLostRecordsListener;
+	}
+
+	// Timestamp methods implementation
+	@Override
+	public long createTimestamp(int recordId, long timeMillis, String description) {
+		if (!timestampDataSource.isOpen()) {
+			timestampDataSource.open();
+		}
+		return timestampDataSource.createTimestamp(recordId, timeMillis, description);
+	}
+
+	@Override
+	public List<Timestamp> getTimestampsForRecord(int recordId) {
+		if (!timestampDataSource.isOpen()) {
+			timestampDataSource.open();
+		}
+		return timestampDataSource.getTimestampsForRecord(recordId);
+	}
+
+	@Override
+	public Timestamp getTimestamp(int timestampId) {
+		if (!timestampDataSource.isOpen()) {
+			timestampDataSource.open();
+		}
+		return timestampDataSource.getTimestamp(timestampId);
+	}
+
+	@Override
+	public boolean updateTimestampDescription(int timestampId, String newDescription) {
+		if (!timestampDataSource.isOpen()) {
+			timestampDataSource.open();
+		}
+		return timestampDataSource.updateTimestampDescription(timestampId, newDescription);
+	}
+
+	@Override
+	public boolean deleteTimestamp(int timestampId) {
+		if (!timestampDataSource.isOpen()) {
+			timestampDataSource.open();
+		}
+		return timestampDataSource.deleteTimestamp(timestampId);
+	}
+
+	@Override
+	public int deleteTimestampsForRecord(int recordId) {
+		if (!timestampDataSource.isOpen()) {
+			timestampDataSource.open();
+		}
+		return timestampDataSource.deleteTimestampsForRecord(recordId);
+	}
+
+	@Override
+	public int getTimestampCount(int recordId) {
+		if (!timestampDataSource.isOpen()) {
+			timestampDataSource.open();
+		}
+		return timestampDataSource.getTimestampCount(recordId);
 	}
 }

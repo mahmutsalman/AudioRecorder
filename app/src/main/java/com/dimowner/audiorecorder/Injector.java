@@ -53,6 +53,7 @@ import com.dimowner.audiorecorder.app.records.RecordsPresenter;
 import com.dimowner.audiorecorder.app.settings.SettingsContract;
 import com.dimowner.audiorecorder.app.settings.SettingsPresenter;
 import com.dimowner.audiorecorder.data.database.TrashDataSource;
+import com.dimowner.audiorecorder.data.database.TimestampDataSource;
 
 public class Injector {
 
@@ -87,12 +88,16 @@ public class Injector {
 		return TrashDataSource.getInstance(context);
 	}
 
+	public TimestampDataSource provideTimestampDataSource(Context context) {
+		return TimestampDataSource.getInstance(context);
+	}
+
 	public FileRepository provideFileRepository(Context context) {
 		return FileRepositoryImpl.getInstance(context, providePrefs(context));
 	}
 
 	public LocalRepository provideLocalRepository(Context context) {
-		return LocalRepositoryImpl.getInstance(provideRecordsDataSource(context), provideTrashDataSource(context), provideFileRepository(context), providePrefs(context));
+		return LocalRepositoryImpl.getInstance(provideRecordsDataSource(context), provideTrashDataSource(context), provideTimestampDataSource(context), provideFileRepository(context), providePrefs(context));
 	}
 
 	public AppRecorder provideAppRecorder(Context context) {

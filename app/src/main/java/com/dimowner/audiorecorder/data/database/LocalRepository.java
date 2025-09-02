@@ -84,4 +84,19 @@ public interface LocalRepository {
 	void removeOutdatedTrashRecords();
 
 	void setOnRecordsLostListener(OnRecordsLostListener listener);
+
+	// Timestamp methods
+	long createTimestamp(int recordId, long timeMillis, String description);
+
+	List<Timestamp> getTimestampsForRecord(int recordId);
+
+	Timestamp getTimestamp(int timestampId);
+
+	boolean updateTimestampDescription(int timestampId, String newDescription);
+
+	boolean deleteTimestamp(int timestampId);
+
+	int deleteTimestampsForRecord(int recordId);
+
+	int getTimestampCount(int recordId);
 }
