@@ -141,5 +141,7 @@ public interface MainContract {
 		void disablePlaybackProgressListener();
 
 		void enablePlaybackProgressListener();
+		
+		void loadSpecificRecord(long recordId);
 	}
 }

@@ -238,17 +238,13 @@ public class RecordsActivity extends Activity implements RecordsContract.View, V
 		});
 
 		adapter = new RecordsAdapter(ARApplication.getInjector().provideSettingsMapper(getApplicationContext()));
-		adapter.setItemClickListener((view, id, path, position) -> presenter.setActiveRecord(id, new RecordsContract.Callback() {
-			@Override public void onSuccess() {
-				presenter.stopPlayback();
-				if (startPlayback()) {
-					adapter.setActiveItem(position);
-				}
-			}
-			@Override public void onError(Exception e) {
-				Timber.e(e);
-			}
-		}));
+		adapter.setItemClickListener((view, id, path, position) -> {
+			// Navigate to MainActivity with the selected record
+			Intent intent = new Intent(this, com.dimowner.audiorecorder.app.main.MainActivity.class);
+			intent.putExtra("record_id", id);
+			intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+			startActivity(intent);
+		});
 		adapter.setOnAddToBookmarkListener(new RecordsAdapter.OnAddToBookmarkListener() {
 			@Override public void onAddToBookmarks(int id) {
 				presenter.addToBookmark(id);

@@ -581,6 +581,52 @@ public class MainPresenter implements MainContract.UserActionsListener {
 		}
 	}
 
+	public void loadSpecificRecord(long recordId) {
+		if (!appRecorder.isRecording()) {
+			if (view != null) {
+				view.showProgress();
+			}
+			loadingTasks.postRunnable(() -> {
+				final Record rec = localRepository.getRecord((int) recordId);
+				if (rec != null) {
+					// Set this as the active record
+					prefs.setActiveRecord(rec.getId());
+					songDuration = rec.getDuration();
+					// Load timestamps for this record
+					final List<com.dimowner.audiorecorder.data.database.Timestamp> timestamps = localRepository.getTimestampsForRecord(rec.getId());
+					AndroidUtils.runOnUIThread(() -> {
+						if (view != null) {
+							// Stop any current playback
+							if (audioPlayer.isPlaying() || audioPlayer.isPaused()) {
+								audioPlayer.stop();
+							}
+							
+							view.showWaveForm(rec.getAmps(), songDuration, 0);
+							view.showName(rec.getName());
+							view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(songDuration / 1000));
+							view.showTimestamps(timestamps);
+							view.showOptionsMenu();
+							view.hideProgress();
+							updateInformation(rec.getFormat(), rec.getSampleRate(), rec.getSize());
+							view.showPlayStop();
+						}
+					});
+				} else {
+					AndroidUtils.runOnUIThread(() -> {
+						if (view != null) {
+							view.hideProgress();
+							view.showWaveForm(new int[]{}, 0, 0);
+							view.showTimestamps(new java.util.ArrayList<>());
+							view.showName("");
+							view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(0));
+							view.hideOptionsMenu();
+						}
+					});
+				}
+			});
+		}
+	}
+
 	@Deprecated //Remove soon
 	@Override
 	public void checkPublicStorageRecords() {

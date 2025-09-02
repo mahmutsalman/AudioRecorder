@@ -289,6 +289,10 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 				}
 			}
 		}
+		
+		// Handle record selection intent
+		handleRecordIntent(getIntent());
+		
 		checkNotificationPermission();
 	}
 
@@ -323,6 +327,22 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	protected void onDestroy() {
 		super.onDestroy();
 		colorMap.removeOnThemeColorChangeListener(onThemeColorChangeListener);
+	}
+
+	@Override
+	protected void onNewIntent(Intent intent) {
+		super.onNewIntent(intent);
+		setIntent(intent);
+		handleRecordIntent(intent);
+	}
+
+	private void handleRecordIntent(Intent intent) {
+		if (intent != null && intent.hasExtra("record_id")) {
+			long recordId = intent.getLongExtra("record_id", -1);
+			if (recordId != -1 && presenter != null) {
+				presenter.loadSpecificRecord(recordId);
+			}
+		}
 	}
 
 	@Override
