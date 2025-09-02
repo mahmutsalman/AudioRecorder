@@ -19,6 +19,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.view.View
@@ -26,6 +27,7 @@ import androidx.core.content.ContextCompat
 import com.dimowner.audiorecorder.AppConstants
 import com.dimowner.audiorecorder.IntArrayList
 import com.dimowner.audiorecorder.R
+import com.dimowner.audiorecorder.data.database.Timestamp
 import com.dimowner.audiorecorder.util.AndroidUtils
 import com.dimowner.audiorecorder.util.TimeUtils
 import java.util.*
@@ -47,6 +49,11 @@ class RecordingWaveformView @JvmOverloads constructor(
 	private val gridPaint = Paint()
 	private val scrubberPaint = Paint()
 	private val textPaint = TextPaint(TextPaint.ANTI_ALIAS_FLAG)
+	private val timestampPaint = Paint()
+	
+	private var timestamps: List<Timestamp> = emptyList()
+	private var timestampDrawable: Drawable? = null
+	private val timestampSize = AndroidUtils.dpToPx(16).toInt()
 
 	private var textHeight = 0f
 	private var textIndent = 0f
@@ -91,6 +98,14 @@ class RecordingWaveformView @JvmOverloads constructor(
 		textPaint.textAlign = Paint.Align.CENTER
 		textPaint.typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
 		textPaint.textSize = textHeight
+		
+		timestampPaint.style = Paint.Style.STROKE
+		timestampPaint.strokeWidth = AndroidUtils.dpToPx(2)
+		timestampPaint.isAntiAlias = true
+		timestampPaint.color = ContextCompat.getColor(context, R.color.md_deep_orange_A400)
+		
+		timestampDrawable = ContextCompat.getDrawable(context, R.drawable.ic_bookmark_small)
+		timestampDrawable?.setTint(ContextCompat.getColor(context, R.color.md_deep_orange_A400))
 	}
 
 	fun addRecordAmp(amp: Int, mills: Long) {
@@ -182,6 +197,7 @@ class RecordingWaveformView @JvmOverloads constructor(
 		super.onDraw(canvas)
 		drawGrid(canvas)
 		drawRecordingWaveform(canvas)
+		drawTimestamps(canvas)
 		//Draw scrubber
 		canvas.drawLine(viewWidthPx / 2f, 0f, viewWidthPx / 2f, height.toFloat(), scrubberPaint)
 	}
@@ -246,6 +262,38 @@ class RecordingWaveformView @JvmOverloads constructor(
 	private fun clearDrawLines() {
 		for (i in drawLinesArray.indices) {
 			drawLinesArray[i] = 0f
+		}
+	}
+	
+	fun setTimestamps(timestamps: List<Timestamp>) {
+		this.timestamps = timestamps
+		invalidate()
+	}
+	
+	private fun drawTimestamps(canvas: Canvas) {
+		val halfWidthMills = pxToMill(viewWidthPx / 2).toLong()
+		val currentMills = durationMills
+		
+		for (timestamp in timestamps) {
+			if (timestamp.timeMillis <= currentMills) {
+				val timestampPx = millsToPx(currentMills - timestamp.timeMillis)
+				
+				// Only draw timestamps that are visible on screen
+				if (timestampPx >= 0 && timestampPx <= viewWidthPx) {
+					// Draw timestamp line
+					canvas.drawLine(timestampPx.toFloat(), textIndent, timestampPx.toFloat(), height - textIndent, timestampPaint)
+					
+					// Draw bookmark icon
+					timestampDrawable?.let { drawable ->
+						val iconLeft = (timestampPx.toFloat() - timestampSize / 2f).toInt()
+						val iconTop = (textIndent / 2f - timestampSize / 2f).toInt()
+						val iconRight = iconLeft + timestampSize
+						val iconBottom = iconTop + timestampSize
+						drawable.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+						drawable.draw(canvas)
+					}
+				}
+			}
 		}
 	}
 }

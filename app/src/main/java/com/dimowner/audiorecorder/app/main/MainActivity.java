@@ -266,6 +266,14 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 				txtProgress.setText(TimeUtils.formatTimeIntervalHourMinSec2(mills));
 			}
 		});
+		
+		waveformView.setOnTimestampClickListener(new WaveformViewNew.OnTimestampClickListener() {
+			@Override
+			public void onTimestampClick(com.dimowner.audiorecorder.data.database.Timestamp timestamp) {
+				onTimestampClick(timestamp);
+			}
+		});
+		
 		onThemeColorChangeListener = colorKey -> {
 			setTheme(colorMap.getAppThemeResource());
 			recreate();
@@ -510,6 +518,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 
 	@Override
 	public void askRecordingNewName(long id, File file,  boolean showCheckbox) {
+		com.dimowner.audiorecorder.util.DebugLogger.log("MainActivity", "askRecordingNewName called for id=" + id + ", file=" + file.getName());
 		setRecordName(id, file, showCheckbox);
 	}
 
@@ -626,6 +635,19 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			waveformView.setVisibility(View.INVISIBLE);
 		}
 		waveformView.setWaveform(waveForm, duration/1000, playbackMills);
+	}
+
+	@Override
+	public void showTimestamps(List<com.dimowner.audiorecorder.data.database.Timestamp> timestamps) {
+		com.dimowner.audiorecorder.util.DebugLogger.log("MainActivity", "showTimestamps called with " + timestamps.size() + " timestamps");
+		waveformView.setTimestamps(timestamps);
+		recordingWaveformView.setTimestamps(timestamps);
+	}
+
+	@Override
+	public void onTimestampClick(com.dimowner.audiorecorder.data.database.Timestamp timestamp) {
+		com.dimowner.audiorecorder.util.DebugLogger.log("MainActivity", "onTimestampClick: seeking to " + timestamp.getTimeMillis() + "ms");
+		presenter.seekPlayback(timestamp.getTimeMillis());
 	}
 
 	@Override
@@ -810,9 +832,13 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 
 	public void setRecordName(final long recordId, File file, boolean showCheckbox) {
 		final RecordInfo info = AudioDecoder.readRecordInfo(file);
+		com.dimowner.audiorecorder.util.DebugLogger.log("MainActivity", "setRecordName called for recordId=" + recordId + ", currentName='" + info.getName() + "'");
 		AndroidUtils.showRenameDialog(this, info.getName(), showCheckbox, newName -> {
 			if (!info.getName().equalsIgnoreCase(newName)) {
+				com.dimowner.audiorecorder.util.DebugLogger.log("MainActivity", "Record rename requested: '" + info.getName() + "' -> '" + newName + "'");
 				presenter.renameRecord(recordId, newName, info.getFormat());
+			} else {
+				com.dimowner.audiorecorder.util.DebugLogger.log("MainActivity", "Record rename cancelled - same name");
 			}
 		}, v -> {}, (buttonView, isChecked) -> presenter.setAskToRename(!isChecked));
 	}

@@ -23,6 +23,7 @@ import com.dimowner.audiorecorder.IntArrayList;
 import com.dimowner.audiorecorder.app.info.RecordInfo;
 import com.dimowner.audiorecorder.audio.recorder.RecorderContract;
 import com.dimowner.audiorecorder.data.database.Record;
+import com.dimowner.audiorecorder.data.database.Timestamp;
 
 import java.io.File;
 import java.util.List;
@@ -60,6 +61,8 @@ public interface MainContract {
 		void hideRecordProcessing();
 
 		void showWaveForm(int[] waveForm, long duration, long playbackMills);
+		void showTimestamps(List<Timestamp> timestamps);
+		void onTimestampClick(Timestamp timestamp);
 		void waveFormToStart();
 		void showDuration(String duration);
 		void showRecordingProgress(String progress);

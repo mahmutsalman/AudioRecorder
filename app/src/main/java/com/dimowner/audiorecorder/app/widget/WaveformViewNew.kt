@@ -20,6 +20,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.view.MotionEvent
@@ -28,6 +29,7 @@ import android.view.animation.DecelerateInterpolator
 import androidx.core.content.ContextCompat
 import com.dimowner.audiorecorder.AppConstants
 import com.dimowner.audiorecorder.R
+import com.dimowner.audiorecorder.data.database.Timestamp
 import com.dimowner.audiorecorder.util.AndroidUtils
 import com.dimowner.audiorecorder.util.TimeUtils
 
@@ -50,6 +52,11 @@ class WaveformViewNew @JvmOverloads constructor(
 	private val gridPaint = Paint()
 	private val scrubberPaint = Paint()
 	private val textPaint = TextPaint(TextPaint.ANTI_ALIAS_FLAG)
+	private val timestampPaint = Paint()
+	
+	private var timestamps: List<Timestamp> = emptyList()
+	private var timestampDrawable: Drawable? = null
+	private val timestampSize = AndroidUtils.dpToPx(16).toInt()
 
 	private var playProgressPx = 0
 	private var playProgressMills = 0L
@@ -83,6 +90,7 @@ class WaveformViewNew @JvmOverloads constructor(
 	private var gridStepMills: Long = 4000
 
 	private var onSeekListener: OnSeekListener? = null
+	private var onTimestampClickListener: OnTimestampClickListener? = null
 
 	init {
 		isFocusable = false
@@ -112,18 +120,29 @@ class WaveformViewNew @JvmOverloads constructor(
 		textPaint.textAlign = Paint.Align.CENTER
 		textPaint.typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
 		textPaint.textSize = textHeight
+		
+		timestampPaint.style = Paint.Style.STROKE
+		timestampPaint.strokeWidth = AndroidUtils.dpToPx(2)
+		timestampPaint.isAntiAlias = true
+		timestampPaint.color = ContextCompat.getColor(context, R.color.md_deep_orange_A400)
+		
+		timestampDrawable = ContextCompat.getDrawable(context, R.drawable.ic_bookmark_small)
+		timestampDrawable?.setTint(ContextCompat.getColor(context, R.color.md_deep_orange_A400))
 
 		playProgressPx = -1
 		setOnTouchListener(object : OnTouchListener {
 			var startX = 0F
+			var hasMoved = false
 			override fun onTouch(v: View?, event: MotionEvent): Boolean {
 				when (event.action and MotionEvent.ACTION_MASK) {
 					MotionEvent.ACTION_DOWN -> {
 						readPlayProgress = false
 						startX = event.x
+						hasMoved = false
 						onSeekListener?.onStartSeek()
 					}
 					MotionEvent.ACTION_MOVE -> {
+						hasMoved = true
 						var shift = (prevScreenShiftPx + event.x - startX).toInt()
 						//Right waveform move edge
 						if (shift <= -durationPx) {
@@ -139,7 +158,17 @@ class WaveformViewNew @JvmOverloads constructor(
 						invalidate()
 					}
 					MotionEvent.ACTION_UP -> {
-						onSeekListener?.onSeek(-screenShiftPx, pxToMill(-screenShiftPx))
+						if (!hasMoved) {
+							// Check if tap was on a timestamp
+							val clickedTimestamp = getTimestampAt(event.x)
+							if (clickedTimestamp != null) {
+								onTimestampClickListener?.onTimestampClick(clickedTimestamp)
+							} else {
+								onSeekListener?.onSeek(-screenShiftPx, pxToMill(-screenShiftPx))
+							}
+						} else {
+							onSeekListener?.onSeek(-screenShiftPx, pxToMill(-screenShiftPx))
+						}
 						prevScreenShiftPx = screenShiftPx
 						readPlayProgress = true
 						performClick()
@@ -197,6 +226,11 @@ class WaveformViewNew @JvmOverloads constructor(
 			updateWaveform(frameGains, durationMills, playbackMills)
 			requestLayout()
 		}
+	}
+	
+	fun setTimestamps(timestamps: List<Timestamp>) {
+		this.timestamps = timestamps
+		invalidate()
 	}
 
 	private fun updateWaveform(frameGains: IntArray, durationMills: Long, playbackMills: Long) {
@@ -287,6 +321,8 @@ class WaveformViewNew @JvmOverloads constructor(
 		//Draw waveform end indication
 		canvas.drawLine(waveformShiftPx + sampleToPx(waveformData.size), textIndent,
 				waveformShiftPx + sampleToPx(waveformData.size), height - textIndent, linePaint)
+		//Draw timestamps
+		drawTimestamps(canvas)
 		//Draw scrubber
 		canvas.drawLine(viewWidthPx / 2f, 0f, viewWidthPx / 2f, height.toFloat(), scrubberPaint)
 	}
@@ -457,9 +493,53 @@ class WaveformViewNew @JvmOverloads constructor(
 			waveformData[i] = (heights[i] * halfHeight).toInt()
 		}
 	}
+	
+	private fun drawTimestamps(canvas: Canvas) {
+		for (timestamp in timestamps) {
+			val timestampPx = millsToPx(timestamp.timeMillis) + waveformShiftPx
+			
+			// Only draw timestamps that are visible on screen
+			if (timestampPx >= 0 && timestampPx <= viewWidthPx) {
+				// Draw timestamp line
+				canvas.drawLine(timestampPx, textIndent, timestampPx, height - textIndent, timestampPaint)
+				
+				// Draw bookmark icon
+				timestampDrawable?.let { drawable ->
+					val iconLeft = (timestampPx - timestampSize / 2f).toInt()
+					val iconTop = (textIndent / 2f - timestampSize / 2f).toInt()
+					val iconRight = iconLeft + timestampSize
+					val iconBottom = iconTop + timestampSize
+					drawable.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+					drawable.draw(canvas)
+				}
+			}
+		}
+	}
+
+	private fun getTimestampAt(touchX: Float): Timestamp? {
+		val touchTolerance = AndroidUtils.dpToPx(20) // 20dp touch tolerance
+		
+		for (timestamp in timestamps) {
+			val timestampPx = millsToPx(timestamp.timeMillis) + waveformShiftPx
+			if (timestampPx >= 0 && timestampPx <= viewWidthPx) {
+				if (Math.abs(touchX - timestampPx) <= touchTolerance) {
+					return timestamp
+				}
+			}
+		}
+		return null
+	}
 
 	fun setOnSeekListener(onSeekListener: OnSeekListener?) {
 		this.onSeekListener = onSeekListener
+	}
+	
+	fun setOnTimestampClickListener(listener: OnTimestampClickListener?) {
+		this.onTimestampClickListener = listener
+	}
+
+	interface OnTimestampClickListener {
+		fun onTimestampClick(timestamp: Timestamp)
 	}
 
 	interface OnSeekListener {

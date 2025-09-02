@@ -154,6 +154,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 
 				@Override
 				public void onRecordingStopped(final File file, final Record rec) {
+					com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "Recording stopped: id=" + rec.getId() + ", name='" + rec.getName() + "', duration=" + rec.getDuration() + "ms");
 					if (view != null) {
 						if (prefs.isAskToRenameAfterStopRecording()) {
 							view.askRecordingNewName(rec.getId(), file, true);
@@ -427,7 +428,9 @@ public class MainPresenter implements MainContract.UserActionsListener {
 
 	@Override
 	public void renameRecord(final long id, final String newName, final String extension) {
+		com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "renameRecord called: id=" + id + ", newName='" + newName + "', extension='" + extension + "'");
 		if (id < 0 || newName == null || newName.isEmpty()) {
+			com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "renameRecord failed - invalid parameters");
 			AndroidUtils.runOnUIThread(() -> {
 				if (view != null) {
 					view.showError(R.string.error_failed_to_rename);
@@ -471,6 +474,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 								record.isWaveformProcessed(),
 								record.getAmps());
 						if (localRepository.updateRecord(recordUpdated)) {
+							com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "Record successfully renamed: id=" + id + ", newName='" + name + "'");
 							recordDataSource.clearActiveRecord();
 							AndroidUtils.runOnUIThread(() -> {
 								if (view != null) {
@@ -538,6 +542,8 @@ public class MainPresenter implements MainContract.UserActionsListener {
 				final Record rec = recordDataSource.getActiveRecord();
 				if (rec != null) {
 					songDuration = rec.getDuration();
+					// Load timestamps for this record
+					final List<com.dimowner.audiorecorder.data.database.Timestamp> timestamps = localRepository.getTimestampsForRecord(rec.getId());
 					AndroidUtils.runOnUIThread(() -> {
 						if (view != null) {
 							if (audioPlayer.isPaused()) {
@@ -553,6 +559,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 
 							view.showName(rec.getName());
 							view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(songDuration / 1000));
+							view.showTimestamps(timestamps);
 							view.showOptionsMenu();
 							view.hideProgress();
 							updateInformation(rec.getFormat(), rec.getSampleRate(), rec.getSize());
@@ -563,6 +570,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 						if (view != null) {
 							view.hideProgress();
 							view.showWaveForm(new int[]{}, 0, 0);
+							view.showTimestamps(new java.util.ArrayList<>());
 							view.showName("");
 							view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(0));
 							view.hideOptionsMenu();
