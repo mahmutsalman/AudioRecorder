@@ -55,6 +55,7 @@ import com.dimowner.audiorecorder.exception.AppException;
 import com.dimowner.audiorecorder.exception.ErrorParser;
 import com.dimowner.audiorecorder.exception.RecorderInitException;
 import com.dimowner.audiorecorder.util.AndroidUtils;
+import com.dimowner.audiorecorder.util.DebugLogger;
 import com.dimowner.audiorecorder.util.ExtensionsKt;
 import com.dimowner.audiorecorder.util.TimeUtils;
 
@@ -78,6 +79,8 @@ public class RecordingService extends Service {
 
 	public static final String ACTION_STOP_RECORDING = "ACTION_STOP_RECORDING";
 	public static final String ACTION_PAUSE_RECORDING = "ACTION_PAUSE_RECORDING";
+	public static final String ACTION_CREATE_TIMESTAMP = "ACTION_CREATE_TIMESTAMP";
+	public static final String EXTRAS_KEY_TIMESTAMP_DESCRIPTION = "EXTRAS_KEY_TIMESTAMP_DESCRIPTION";
 
 	private static final int NOTIF_ID = 101;
 	private NotificationManager notificationManager;
@@ -218,6 +221,18 @@ public class RecordingService extends Service {
 							appRecorder.resumeRecording();
 						} else {
 							appRecorder.pauseRecording();
+						}
+						break;
+					case ACTION_CREATE_TIMESTAMP:
+						DebugLogger.logServiceAction("ACTION_CREATE_TIMESTAMP", "Intent received in RecordingService");
+						String description = intent.getStringExtra(EXTRAS_KEY_TIMESTAMP_DESCRIPTION);
+						DebugLogger.log("RecordingService", "Creating timestamp with description: '" + (description != null ? description : "null") + "'");
+						long timestampId = createTimestamp(description);
+						if (timestampId > 0) {
+							Timber.d("Successfully created timestamp via intent: %d", timestampId);
+							DebugLogger.log("RecordingService", "Successfully created timestamp via intent: " + timestampId);
+						} else {
+							DebugLogger.log("RecordingService", "Failed to create timestamp via intent");
 						}
 						break;
 				}
@@ -457,6 +472,58 @@ public class RecordingService extends Service {
 
 	public void showError(int resId) {
 		Toast.makeText(getApplicationContext(), resId, Toast.LENGTH_LONG).show();
+	}
+
+	/**
+	 * Create timestamp for current recording at current time position.
+	 * @param description Optional description for the timestamp
+	 * @return Timestamp ID if successful, -1 if failed
+	 */
+	public long createTimestamp(String description) {
+		DebugLogger.log("RecordingService", "createTimestamp() method called");
+		
+		if (!appRecorder.isRecording()) {
+			Timber.w("Cannot create timestamp - not recording");
+			DebugLogger.log("RecordingService", "Cannot create timestamp - not recording");
+			return -1;
+		}
+
+		Record currentRecord = recordDataSource.getRecordingRecord();
+		if (currentRecord == null) {
+			Timber.w("Cannot create timestamp - no active recording record");
+			DebugLogger.log("RecordingService", "Cannot create timestamp - no active recording record");
+			return -1;
+		}
+
+		long currentTimeMillis = appRecorder.getRecordingDuration();
+		DebugLogger.log("RecordingService", "Current recording duration: " + currentTimeMillis + "ms");
+		
+		try {
+			long timestampId = localRepository.createTimestamp(
+				currentRecord.getId(), 
+				currentTimeMillis, 
+				description != null ? description : ""
+			);
+			
+			Timber.d("Created timestamp: id=%d, recordId=%d, time=%dms, desc='%s'", 
+				timestampId, currentRecord.getId(), currentTimeMillis, description);
+			
+			DebugLogger.logTimestampCreation(currentRecord.getId(), timestampId, currentTimeMillis, description);
+			
+			return timestampId;
+		} catch (Exception e) {
+			Timber.e(e, "Failed to create timestamp");
+			DebugLogger.log("RecordingService", "Failed to create timestamp: " + e.getMessage());
+			return -1;
+		}
+	}
+
+	/**
+	 * Create timestamp for current recording without description.
+	 * @return Timestamp ID if successful, -1 if failed
+	 */
+	public long createTimestamp() {
+		return createTimestamp(null);
 	}
 
 	public static class StopRecordingReceiver extends BroadcastReceiver {

@@ -16,7 +16,7 @@
 
 <resources>
 
-	<style name="AppTheme" parent="@android:style/Theme.Material">
+	<style name="AppTheme" parent="Theme.MaterialComponents.Light">
 		<item name="android:colorPrimary">@color/md_blue_gray_700</item>
 		<item name="android:colorPrimaryDark">@color/md_blue_gray_700</item>
 		<item name="android:colorAccent">@color/md_yellow_A700</item>

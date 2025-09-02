@@ -28,6 +28,8 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.WindowManager;
@@ -40,6 +42,8 @@ import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import com.dimowner.audiorecorder.ARApplication;
 import com.dimowner.audiorecorder.ColorMap;
@@ -65,6 +69,7 @@ import com.dimowner.audiorecorder.exception.CantCreateFileException;
 import com.dimowner.audiorecorder.exception.ErrorParser;
 import com.dimowner.audiorecorder.util.AndroidUtils;
 import com.dimowner.audiorecorder.util.AnimationUtil;
+import com.dimowner.audiorecorder.util.DebugLogger;
 import com.dimowner.audiorecorder.util.FileUtil;
 import com.dimowner.audiorecorder.util.TimeUtils;
 
@@ -104,6 +109,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private Button btnRecordingStop;
 	private ImageButton btnShare;
 	private ImageButton btnImport;
+	private FloatingActionButton btnTimestamp;
 	private ProgressBar progressBar;
 	private SeekBar playProgress;
 	private LinearLayout pnlImportProgress;
@@ -161,6 +167,15 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
+		// Initialize debug logger
+		File externalDir = getExternalFilesDir(null);
+		String debugPath = (externalDir != null) ? 
+			externalDir.getAbsolutePath() + "/debug.txt" : 
+			getFilesDir().getAbsolutePath() + "/debug.txt";
+		DebugLogger.init(debugPath);
+		DebugLogger.log("MainActivity", "Application started");
+		DebugLogger.log("MainActivity", "Debug file path: " + DebugLogger.getDebugFilePath());
+
 		waveformView = findViewById(R.id.record);
 		recordingWaveformView = findViewById(R.id.recording_view);
 		txtProgress = findViewById(R.id.txt_progress);
@@ -176,6 +191,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		ImageButton btnSettings = findViewById(R.id.btn_settings);
 		btnShare = findViewById(R.id.btn_share);
 		btnImport = findViewById(R.id.btn_import);
+		btnTimestamp = findViewById(R.id.btn_timestamp);
 		progressBar = findViewById(R.id.progress);
 		playProgress = findViewById(R.id.play_progress);
 		pnlImportProgress = findViewById(R.id.pnl_import_progress);
@@ -196,6 +212,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnSettings.setOnClickListener(this);
 		btnShare.setOnClickListener(this);
 		btnImport.setOnClickListener(this);
+		btnTimestamp.setOnClickListener(this);
 		txtName.setOnClickListener(this);
 		space = getResources().getDimension(R.dimen.spacing_xnormal);
 
@@ -333,6 +350,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			}
 		} else if (id == R.id.txt_name) {
 			presenter.onRenameRecordClick();
+		} else if (id == R.id.btn_timestamp) {
+			createTimestamp();
 		}
 	}
 
@@ -410,6 +429,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnShare.setVisibility(View.GONE);
 		playProgress.setProgress(0);
 		playProgress.setEnabled(false);
+		btnTimestamp.setVisibility(View.VISIBLE);
 		txtDuration.setText(R.string.zero_time);
 		waveformView.setVisibility(View.GONE);
 		recordingWaveformView.setVisibility(View.VISIBLE);
@@ -434,6 +454,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		playProgress.setEnabled(true);
 		btnRecordingStop.setVisibility(View.GONE);
 		btnRecordingStop.setEnabled(false);
+		btnTimestamp.setVisibility(View.GONE);
 		waveformView.setVisibility(View.VISIBLE);
 		recordingWaveformView.setVisibility(View.GONE);
 		recordingWaveformView.reset();
@@ -456,6 +477,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnRecord.setText(R.string.button_resume);
 		btnRecordingStop.setVisibility(View.VISIBLE);
 		btnRecordingStop.setEnabled(true);
+		btnTimestamp.setVisibility(View.VISIBLE);
 		playProgress.setEnabled(false);
 		ivPlaceholder.setVisibility(View.GONE);
 		recordingWaveformView.setVisibility(View.VISIBLE);
@@ -481,6 +503,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnRecordingStop.setEnabled(false);
 		playProgress.setProgress(0);
 		playProgress.setEnabled(false);
+		btnTimestamp.setVisibility(View.VISIBLE);
 		txtDuration.setText(R.string.zero_time);
 		ivPlaceholder.setVisibility(View.GONE);
 	}
@@ -515,6 +538,27 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		} catch (CantCreateFileException e) {
 			showError(ErrorParser.parseException(e));
 		}
+	}
+
+	private void createTimestamp() {
+		DebugLogger.logButtonClick("btnTimestamp (bookmark icon)");
+		DebugLogger.log("MainActivity", "createTimestamp() method called");
+		
+		// Add haptic feedback
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			VibrationEffect effect = VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE);
+			Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+			if (vibrator != null) {
+				vibrator.vibrate(effect);
+				DebugLogger.log("MainActivity", "Haptic feedback triggered");
+			}
+		}
+		
+		Intent intent = new Intent(this, RecordingService.class);
+		intent.setAction(RecordingService.ACTION_CREATE_TIMESTAMP);
+		intent.putExtra(RecordingService.EXTRAS_KEY_TIMESTAMP_DESCRIPTION, "");
+		DebugLogger.log("MainActivity", "Sending ACTION_CREATE_TIMESTAMP intent to RecordingService");
+		startService(intent);
 	}
 
 	@Override
