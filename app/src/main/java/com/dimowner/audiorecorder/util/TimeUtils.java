@@ -239,4 +239,39 @@ public class TimeUtils {
 		SimpleDateFormat dayMonth = new SimpleDateFormat(pattern, Locale.getDefault());
 		return dayMonth.format(new Date(time));
 	}
+
+	/**
+	 * Parse time string in format "MM:SS" or "HH:MM:SS" to milliseconds
+	 * @param timeStr Time string to parse
+	 * @return Time in milliseconds, or -1 if invalid format
+	 */
+	public static long parseTimeToMillis(String timeStr) {
+		if (timeStr == null || timeStr.trim().isEmpty()) {
+			return -1;
+		}
+		
+		try {
+			String[] parts = timeStr.trim().split(":");
+			if (parts.length == 2) {
+				// MM:SS format
+				int minutes = Integer.parseInt(parts[0]);
+				int seconds = Integer.parseInt(parts[1]);
+				if (minutes >= 0 && seconds >= 0 && seconds < 60) {
+					return (minutes * 60 + seconds) * 1000L;
+				}
+			} else if (parts.length == 3) {
+				// HH:MM:SS format
+				int hours = Integer.parseInt(parts[0]);
+				int minutes = Integer.parseInt(parts[1]);
+				int seconds = Integer.parseInt(parts[2]);
+				if (hours >= 0 && minutes >= 0 && minutes < 60 && seconds >= 0 && seconds < 60) {
+					return (hours * 3600 + minutes * 60 + seconds) * 1000L;
+				}
+			}
+		} catch (NumberFormatException e) {
+			return -1;
+		}
+		
+		return -1;
+	}
 }

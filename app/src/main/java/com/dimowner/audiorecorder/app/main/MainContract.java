@@ -100,6 +100,11 @@ public interface MainContract {
 		void showCurrentTimestampNote(String note);
 		void showNextTimestampNote(String note);
 		void showTimestampEditDialog(int timestampId, String currentNote);
+		
+		void showLoopTimeInputDialog(long currentPosition, long duration);
+		void showLoopEnabled(long startTime, long endTime);
+		void showLoopDisabled();
+		void updateLoopProgress(boolean isLooping);
 	}
 
 	interface UserActionsListener extends Contract.UserActionsListener<MainContract.View> {
@@ -163,5 +168,8 @@ public interface MainContract {
 		void enablePlaybackProgressListener();
 		
 		void loadSpecificRecord(long recordId);
+		
+		void onLoopToggleClick();
+		void onLoopEndTimeSet(long endMillis);
 	}
 }

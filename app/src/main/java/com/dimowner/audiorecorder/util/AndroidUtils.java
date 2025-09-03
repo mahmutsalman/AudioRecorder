@@ -528,6 +528,60 @@ public class AndroidUtils {
 		alertDialog.show();
 	}
 
+	public static void showLoopTimeInputDialog(Activity activity,
+											   final long currentPosition,
+											   final long duration,
+											   final OnLoopEndTimeSetListener positiveBtnListener,
+											   final View.OnClickListener negativeBtnListener) {
+		final AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(activity);
+		dialogBuilder.setCancelable(true);
+		View view = activity.getLayoutInflater().inflate(R.layout.dialog_time_input, null, false);
+		
+		EditText editText = view.findViewById(R.id.input_time);
+		editText.setHint(R.string.loop_time_hint);
+		// Set default end time to current position + 10 seconds or end of recording
+		long defaultEndTime = Math.min(currentPosition + 10000, duration);
+		editText.setText(TimeUtils.formatTimeIntervalHourMinSec2(defaultEndTime));
+		editText.requestFocus();
+		editText.setSelection(editText.getText().length());
+		
+		dialogBuilder.setView(view);
+		AlertDialog alertDialog = dialogBuilder.create();
+		
+		if (negativeBtnListener != null) {
+			Button negativeBtn = view.findViewById(R.id.dialog_negative_btn);
+			negativeBtn.setOnClickListener(v -> {
+				negativeBtnListener.onClick(v);
+				alertDialog.dismiss();
+			});
+		} else {
+			view.findViewById(R.id.dialog_negative_btn).setVisibility(View.GONE);
+		}
+		
+		if (positiveBtnListener != null) {
+			Button positiveBtn = view.findViewById(R.id.dialog_positive_btn);
+			positiveBtn.setOnClickListener(v -> {
+				String timeStr = editText.getText().toString();
+				long timeMillis = TimeUtils.parseTimeToMillis(timeStr);
+				if (timeMillis > 0) {
+					positiveBtnListener.onTimeSet(timeMillis);
+					alertDialog.dismiss();
+				} else {
+					// Show error for invalid format
+					editText.setError(activity.getString(R.string.invalid_time_format));
+				}
+			});
+		} else {
+			view.findViewById(R.id.dialog_positive_btn).setVisibility(View.GONE);
+		}
+		
+		Window window = alertDialog.getWindow();
+		if (window != null) {
+			window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+		}
+		alertDialog.show();
+	}
+
 	public static void showRenameDialog(Activity activity,
 													final String name,
 													final boolean showCheckbox,
@@ -688,5 +742,9 @@ public class AndroidUtils {
 	
 	public interface OnTimestampNoteEditListener {
 		void onEdit(int timestampId, String note);
+	}
+	
+	public interface OnLoopEndTimeSetListener {
+		void onTimeSet(long timeMillis);
 	}
 }

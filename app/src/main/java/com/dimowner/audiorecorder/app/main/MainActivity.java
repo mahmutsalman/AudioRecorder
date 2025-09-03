@@ -109,6 +109,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private ImageButton btnPreviousTimestamp;
 	private ImageButton btnNextTimestamp;
 	private Button btnPlaybackSpeed;
+	private ImageButton btnLoop;
 	private Button btnRecord;
 	private Button btnRecordingStop;
 	private ImageButton btnShare;
@@ -199,6 +200,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnPreviousTimestamp = findViewById(R.id.btn_previous_timestamp);
 		btnNextTimestamp = findViewById(R.id.btn_next_timestamp);
 		btnPlaybackSpeed = findViewById(R.id.btn_playback_speed);
+		btnLoop = findViewById(R.id.btn_loop);
 		ImageButton btnRecordsList = findViewById(R.id.btn_records_list);
 		ImageButton btnSettings = findViewById(R.id.btn_settings);
 		btnShare = findViewById(R.id.btn_share);
@@ -228,6 +230,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnPreviousTimestamp.setOnClickListener(this);
 		btnNextTimestamp.setOnClickListener(this);
 		btnPlaybackSpeed.setOnClickListener(this);
+		btnLoop.setOnClickListener(this);
 		btnRecordsList.setOnClickListener(this);
 		btnSettings.setOnClickListener(this);
 		btnShare.setOnClickListener(this);
@@ -235,7 +238,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnTimestamp.setOnClickListener(this);
 		txtName.setOnClickListener(this);
 		txtCurrentTimestampNote.setOnClickListener(this);
-		space = getResources().getDimension(R.dimen.spacing_xnormal);
+		space = getResources().getDimension(R.dimen.spacing_small);
 
 		playProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 			@Override
@@ -389,6 +392,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			presenter.onNextTimestampClick();
 		} else if (id == R.id.btn_playback_speed) {
 			presenter.onPlaybackSpeedClick();
+		} else if (id == R.id.btn_loop) {
+			presenter.onLoopToggleClick();
 		} else if (id == R.id.btn_records_list) {
 			startActivity(RecordsActivity.getStartIntent(getApplicationContext()));
 		} else if (id == R.id.btn_settings) {
@@ -642,6 +647,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 					btnPreviousTimestamp.setVisibility(View.VISIBLE);
 					btnNextTimestamp.setVisibility(View.VISIBLE);
 					btnPlaybackSpeed.setVisibility(View.VISIBLE);
+					btnLoop.setVisibility(View.VISIBLE);
 					btnPlay.setImageResource(R.drawable.ic_pause);
 				}
 				@Override public void onAnimationCancel(Animator animation) { }
@@ -653,6 +659,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			btnPreviousTimestamp.setVisibility(View.VISIBLE);
 			btnNextTimestamp.setVisibility(View.VISIBLE);
 			btnPlaybackSpeed.setVisibility(View.VISIBLE);
+			btnLoop.setVisibility(View.VISIBLE);
 			btnPlay.setImageResource(R.drawable.ic_pause);
 		}
 	}
@@ -663,6 +670,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnPreviousTimestamp.setVisibility(View.VISIBLE);
 		btnNextTimestamp.setVisibility(View.VISIBLE);
 		btnPlaybackSpeed.setVisibility(View.VISIBLE);
+		btnLoop.setVisibility(View.VISIBLE);
 		btnPlay.setTranslationX(-space);
 		btnPlay.setImageResource(R.drawable.ic_play);
 	}
@@ -681,6 +689,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 				btnPreviousTimestamp.setVisibility(View.GONE);
 				btnNextTimestamp.setVisibility(View.GONE);
 				btnPlaybackSpeed.setVisibility(View.GONE);
+				btnLoop.setVisibility(View.GONE);
 			}
 			@Override public void onAnimationCancel(Animator animation) { }
 			@Override public void onAnimationRepeat(Animator animation) { }
@@ -914,6 +923,40 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			v -> {
 				// Cancel action - do nothing
 			});
+	}
+
+	@Override
+	public void showLoopTimeInputDialog(long currentPosition, long duration) {
+		AndroidUtils.showLoopTimeInputDialog(this, currentPosition, duration,
+			(timeMillis) -> presenter.onLoopEndTimeSet(timeMillis),
+			v -> {
+				// Cancel action - disable loop
+				presenter.onLoopToggleClick(); // This will disable the loop that was just enabled
+			});
+	}
+
+	@Override
+	public void showLoopEnabled(long startTime, long endTime) {
+		runOnUiThread(() -> {
+			// Change loop button appearance to indicate active state
+			btnLoop.setColorFilter(getResources().getColor(R.color.md_purple_500));
+			showMessage(R.string.loop_enabled);
+		});
+	}
+
+	@Override
+	public void showLoopDisabled() {
+		runOnUiThread(() -> {
+			// Reset loop button appearance
+			btnLoop.clearColorFilter();
+			showMessage(R.string.loop_disabled);
+		});
+	}
+
+	@Override
+	public void updateLoopProgress(boolean isLooping) {
+		// This method can be used to show visual feedback during looping
+		// For now, we'll keep it simple - the button color change is enough
 	}
 
 	@Override

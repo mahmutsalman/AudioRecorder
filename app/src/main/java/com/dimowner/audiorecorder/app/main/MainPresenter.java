@@ -87,6 +87,11 @@ public class MainPresenter implements MainContract.UserActionsListener {
 	private int currentTimestampIndex = -1;
 	private List<Timestamp> currentTimestamps = new ArrayList<>();
 
+	// Loop/Repetition feature variables
+	private boolean isLoopEnabled = false;
+	private long loopStartMillis = 0;
+	private long loopEndMillis = 0;
+
 	public MainPresenter(final Prefs prefs, final FileRepository fileRepository,
 						 final LocalRepository localRepository,
 						 PlayerContractNew.Player audioPlayer,
@@ -243,6 +248,21 @@ public class MainPresenter implements MainContract.UserActionsListener {
 				@Override
 				public void onPlayProgress(final long mills) {
 					currentPlaybackPosition = mills;
+					
+					// Check loop condition first
+					if (isLoopEnabled && mills >= loopEndMillis && loopEndMillis > loopStartMillis) {
+						audioPlayer.seek(loopStartMillis);
+						currentPlaybackPosition = loopStartMillis;
+						if (view != null) {
+							long duration = songDuration/1000;
+							if (duration > 0) {
+								view.onPlayProgress(loopStartMillis, (int) (1000 * loopStartMillis / duration));
+							}
+							view.updateLoopProgress(true);
+						}
+						return;
+					}
+					
 					if (view != null && listenPlaybackProgress) {
 						long duration = songDuration/1000;
 						if (duration > 0) {
@@ -1342,5 +1362,44 @@ public class MainPresenter implements MainContract.UserActionsListener {
 			}
 		}
 		return null;
+	}
+
+	@Override
+	public void onLoopToggleClick() {
+		if (!isLoopEnabled) {
+			// Enable loop mode - set start position to current playback position
+			isLoopEnabled = true;
+			loopStartMillis = currentPlaybackPosition;
+			if (view != null) {
+				// Show dialog to set end time
+				view.showLoopTimeInputDialog(currentPlaybackPosition, songDuration / 1000);
+			}
+		} else {
+			// Disable loop mode
+			isLoopEnabled = false;
+			loopStartMillis = 0;
+			loopEndMillis = 0;
+			if (view != null) {
+				view.showLoopDisabled();
+			}
+		}
+	}
+
+	@Override
+	public void onLoopEndTimeSet(long endMillis) {
+		if (isLoopEnabled && endMillis > loopStartMillis) {
+			loopEndMillis = endMillis;
+			if (view != null) {
+				view.showLoopEnabled(loopStartMillis, loopEndMillis);
+			}
+		} else {
+			// Invalid end time, disable loop
+			isLoopEnabled = false;
+			loopStartMillis = 0;
+			loopEndMillis = 0;
+			if (view != null) {
+				view.showLoopDisabled();
+			}
+		}
 	}
 }

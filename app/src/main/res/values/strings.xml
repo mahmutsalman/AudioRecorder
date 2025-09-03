@@ -303,4 +303,10 @@
 	<string name="timestamp_note_hint">Enter note for this timestamp</string>
 	<string name="no_note">No note</string>
 	<string name="tap_to_add_note">Tap to add note</string>
+	<string name="loop_section">Loop Section</string>
+	<string name="set_loop_end_time">Set Loop End Time</string>
+	<string name="loop_time_hint">Enter end time (MM:SS or HH:MM:SS)</string>
+	<string name="loop_enabled">Loop enabled</string>
+	<string name="loop_disabled">Loop disabled</string>
+	<string name="invalid_time_format">Invalid time format</string>
 </resources>
