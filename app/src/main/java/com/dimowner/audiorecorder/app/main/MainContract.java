@@ -87,6 +87,8 @@ public interface MainContract {
 		void showMigratePublicStorageWarning();
 
 		void showRecordFileNotAvailable(String path);
+
+		void showPlaybackSpeed(float speed);
 	}
 
 	interface UserActionsListener extends Contract.UserActionsListener<MainContract.View> {
@@ -106,6 +108,7 @@ public interface MainContract {
 		void stopPlayback();
 		void onPreviousTimestampClick();
 		void onNextTimestampClick();
+		void onPlaybackSpeedClick();
 
 		void renameRecord(long id, String name, String extension);
 

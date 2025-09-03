@@ -18,6 +18,8 @@ package com.dimowner.audiorecorder.audio.player
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.MediaPlayer.OnPreparedListener
+import android.media.PlaybackParams
+import android.os.Build
 import android.os.Handler
 import com.dimowner.audiorecorder.AppConstants
 import com.dimowner.audiorecorder.exception.AppException
@@ -34,6 +36,7 @@ class AudioPlayerNew: PlayerContractNew.Player, OnPreparedListener {
 	private var playerState = PlayerState.STOPPED
 	private var pauseTimeMills: Long = 0
 	private var prevPosMills: Long = 0
+	private var playbackSpeed: Float = 1.0f
 	private val handler = Handler()
 
 	override fun addPlayerCallback(callback: PlayerContractNew.PlayerCallback) {
@@ -85,6 +88,10 @@ class AudioPlayerNew: PlayerContractNew.Player, OnPreparedListener {
 		mediaPlayer.seekTo(pauseTimeMills.toInt())
 		pauseTimeMills = 0
 		playerState = PlayerState.PLAYING
+		
+		// Apply current playback speed
+		applyPlaybackSpeed()
+		
 		onStartPlay()
 		mediaPlayer.setOnCompletionListener {
 			stop()
@@ -122,6 +129,10 @@ class AudioPlayerNew: PlayerContractNew.Player, OnPreparedListener {
 			mediaPlayer.seekTo(pauseTimeMills.toInt())
 			pauseTimeMills = 0
 			playerState = PlayerState.PLAYING
+			
+			// Apply current playback speed
+			applyPlaybackSpeed()
+			
 			onStartPlay()
 			mediaPlayer.setOnCompletionListener {
 				stop()
@@ -157,6 +168,29 @@ class AudioPlayerNew: PlayerContractNew.Player, OnPreparedListener {
 
 	override fun isPlaying(): Boolean {
 		return playerState == PlayerState.PLAYING
+	}
+
+	override fun setPlaybackSpeed(speed: Float) {
+		playbackSpeed = speed
+		if (playerState == PlayerState.PLAYING) {
+			applyPlaybackSpeed()
+		}
+	}
+
+	override fun getPlaybackSpeed(): Float {
+		return playbackSpeed
+	}
+
+	private fun applyPlaybackSpeed() {
+		try {
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+				val params = PlaybackParams()
+				params.speed = playbackSpeed
+				mediaPlayer.playbackParams = params
+			}
+		} catch (e: Exception) {
+			Timber.e(e, "Failed to set playback speed: $playbackSpeed")
+		}
 	}
 
 	private fun schedulePlaybackTimeUpdate() {

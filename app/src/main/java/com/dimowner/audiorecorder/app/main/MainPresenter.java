@@ -268,6 +268,13 @@ public class MainPresenter implements MainContract.UserActionsListener {
 
 		this.audioPlayer.addPlayerCallback(playerCallback);
 
+		// Initialize playback speed from preferences
+		float savedSpeed = prefs.getPlaybackSpeed();
+		audioPlayer.setPlaybackSpeed(savedSpeed);
+		if (view != null) {
+			view.showPlaybackSpeed(savedSpeed);
+		}
+
 		if (audioPlayer.isPlaying()) {
 			view.showPlayStart(false);
 		} else if (audioPlayer.isPaused()) {
@@ -551,6 +558,31 @@ public class MainPresenter implements MainContract.UserActionsListener {
 			}
 		} else {
 			com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "No timestamps before current position " + currentPosition + "ms (with buffer)");
+		}
+	}
+
+	@Override
+	public void onPlaybackSpeedClick() {
+		float currentSpeed = audioPlayer.getPlaybackSpeed();
+		float[] speedOptions = {0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f};
+		
+		// Find current speed index and move to next
+		int currentIndex = 0;
+		for (int i = 0; i < speedOptions.length; i++) {
+			if (Math.abs(speedOptions[i] - currentSpeed) < 0.01f) {
+				currentIndex = i;
+				break;
+			}
+		}
+		
+		// Cycle to next speed
+		int nextIndex = (currentIndex + 1) % speedOptions.length;
+		float newSpeed = speedOptions[nextIndex];
+		
+		audioPlayer.setPlaybackSpeed(newSpeed);
+		prefs.setPlaybackSpeed(newSpeed);
+		if (view != null) {
+			view.showPlaybackSpeed(newSpeed);
 		}
 	}
 

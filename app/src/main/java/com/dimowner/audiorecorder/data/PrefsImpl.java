@@ -56,6 +56,7 @@ public class PrefsImpl implements Prefs {
 	private static final String PREF_KEY_SETTING_SAMPLE_RATE = "setting_sample_rate";
 	private static final String PREF_KEY_SETTING_NAMING_FORMAT = "setting_naming_format";
 	private static final String PREF_KEY_SETTING_CHANNEL_COUNT = "setting_channel_count";
+	private static final String PREF_KEY_PLAYBACK_SPEED = "playback_speed";
 
 	private final SharedPreferences sharedPreferences;
 
@@ -393,6 +394,18 @@ public class PrefsImpl implements Prefs {
 	@Override
 	public int getSettingChannelCount() {
 		return sharedPreferences.getInt(PREF_KEY_SETTING_CHANNEL_COUNT, AppConstants.DEFAULT_CHANNEL_COUNT);
+	}
+
+	@Override
+	public void setPlaybackSpeed(float speed) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putFloat(PREF_KEY_PLAYBACK_SPEED, speed);
+		editor.apply();
+	}
+
+	@Override
+	public float getPlaybackSpeed() {
+		return sharedPreferences.getFloat(PREF_KEY_PLAYBACK_SPEED, 1.0f);
 	}
 
 	@Override

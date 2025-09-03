@@ -40,6 +40,8 @@ interface PlayerContractNew {
 		fun getPauseTime(): Long
 		fun isPaused(): Boolean
 		fun isPlaying(): Boolean
+		fun setPlaybackSpeed(speed: Float)
+		fun getPlaybackSpeed(): Float
 	}
 }
 

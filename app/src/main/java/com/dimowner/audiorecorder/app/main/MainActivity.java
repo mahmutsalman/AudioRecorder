@@ -75,6 +75,7 @@ import com.dimowner.audiorecorder.util.TimeUtils;
 
 import java.io.File;
 import java.util.List;
+import java.util.Locale;
 
 import androidx.annotation.NonNull;
 import timber.log.Timber;
@@ -107,6 +108,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private ImageButton btnStop;
 	private ImageButton btnPreviousTimestamp;
 	private ImageButton btnNextTimestamp;
+	private Button btnPlaybackSpeed;
 	private Button btnRecord;
 	private Button btnRecordingStop;
 	private ImageButton btnShare;
@@ -191,6 +193,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnStop = findViewById(R.id.btn_stop);
 		btnPreviousTimestamp = findViewById(R.id.btn_previous_timestamp);
 		btnNextTimestamp = findViewById(R.id.btn_next_timestamp);
+		btnPlaybackSpeed = findViewById(R.id.btn_playback_speed);
 		ImageButton btnRecordsList = findViewById(R.id.btn_records_list);
 		ImageButton btnSettings = findViewById(R.id.btn_settings);
 		btnShare = findViewById(R.id.btn_share);
@@ -214,6 +217,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnStop.setOnClickListener(this);
 		btnPreviousTimestamp.setOnClickListener(this);
 		btnNextTimestamp.setOnClickListener(this);
+		btnPlaybackSpeed.setOnClickListener(this);
 		btnRecordsList.setOnClickListener(this);
 		btnSettings.setOnClickListener(this);
 		btnShare.setOnClickListener(this);
@@ -372,6 +376,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			presenter.onPreviousTimestampClick();
 		} else if (id == R.id.btn_next_timestamp) {
 			presenter.onNextTimestampClick();
+		} else if (id == R.id.btn_playback_speed) {
+			presenter.onPlaybackSpeedClick();
 		} else if (id == R.id.btn_records_list) {
 			startActivity(RecordsActivity.getStartIntent(getApplicationContext()));
 		} else if (id == R.id.btn_settings) {
@@ -615,6 +621,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 					btnStop.setVisibility(View.VISIBLE);
 					btnPreviousTimestamp.setVisibility(View.VISIBLE);
 					btnNextTimestamp.setVisibility(View.VISIBLE);
+					btnPlaybackSpeed.setVisibility(View.VISIBLE);
 					btnPlay.setImageResource(R.drawable.ic_pause);
 				}
 				@Override public void onAnimationCancel(Animator animation) { }
@@ -625,6 +632,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			btnStop.setVisibility(View.VISIBLE);
 			btnPreviousTimestamp.setVisibility(View.VISIBLE);
 			btnNextTimestamp.setVisibility(View.VISIBLE);
+			btnPlaybackSpeed.setVisibility(View.VISIBLE);
 			btnPlay.setImageResource(R.drawable.ic_pause);
 		}
 	}
@@ -634,6 +642,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnStop.setVisibility(View.VISIBLE);
 		btnPreviousTimestamp.setVisibility(View.VISIBLE);
 		btnNextTimestamp.setVisibility(View.VISIBLE);
+		btnPlaybackSpeed.setVisibility(View.VISIBLE);
 		btnPlay.setTranslationX(-space);
 		btnPlay.setImageResource(R.drawable.ic_play);
 	}
@@ -651,6 +660,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 				btnStop.setVisibility(View.GONE);
 				btnPreviousTimestamp.setVisibility(View.GONE);
 				btnNextTimestamp.setVisibility(View.GONE);
+				btnPlaybackSpeed.setVisibility(View.GONE);
 			}
 			@Override public void onAnimationCancel(Animator animation) { }
 			@Override public void onAnimationRepeat(Animator animation) { }
@@ -796,6 +806,11 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	@Override
 	public void showRecordFileNotAvailable(String path) {
 		AndroidUtils.showRecordFileNotAvailable(this, path);
+	}
+
+	@Override
+	public void showPlaybackSpeed(float speed) {
+		btnPlaybackSpeed.setText(String.format(Locale.getDefault(), "%.1fx", speed));
 	}
 
 	@Override

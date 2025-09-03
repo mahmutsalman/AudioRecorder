@@ -57,6 +57,9 @@ public interface Prefs {
 	void setSettingThemeColor(String colorKey);
 	String getSettingThemeColor();
 
+	void setPlaybackSpeed(float speed);
+	float getPlaybackSpeed();
+
 	void setSettingNamingFormat(String nameKay);
 	String getSettingNamingFormat();
 
