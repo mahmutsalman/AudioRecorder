@@ -484,9 +484,12 @@ public class MainPresenter implements MainContract.UserActionsListener {
 		
 		// Find next timestamp after current position
 		com.dimowner.audiorecorder.data.database.Timestamp nextTimestamp = null;
-		for (com.dimowner.audiorecorder.data.database.Timestamp ts : timestamps) {
+		int nextTimestampIndex = -1;
+		for (int i = 0; i < timestamps.size(); i++) {
+			com.dimowner.audiorecorder.data.database.Timestamp ts = timestamps.get(i);
 			if (ts.getTimeMillis() > currentPosition) {
 				nextTimestamp = ts;
+				nextTimestampIndex = i;
 				break;
 			}
 		}
@@ -500,6 +503,11 @@ public class MainPresenter implements MainContract.UserActionsListener {
 			// Make final copies for lambda
 			final long timestampPosition = nextTimestamp.getTimeMillis();
 			final long duration = songDuration;
+			final int finalNextTimestampIndex = nextTimestampIndex;
+			
+			// Update current timestamps list for navigation
+			currentTimestamps = new ArrayList<>(timestamps);
+			currentTimestampIndex = finalNextTimestampIndex;
 			
 			// Seek to the next timestamp
 			audioPlayer.seek(timestampPosition);
@@ -508,6 +516,10 @@ public class MainPresenter implements MainContract.UserActionsListener {
 			AndroidUtils.runOnUIThread(() -> {
 				if (view != null) {
 					view.onPlayProgress(timestampPosition, (int)(1000 * timestampPosition / duration));
+					// Update navigation display
+					view.showTimestampNavigation(currentTimestampIndex + 1, currentTimestamps.size());
+					// Update timestamp notes display
+					updateTimestampNotesDisplay();
 				}
 			});
 			
@@ -547,10 +559,12 @@ public class MainPresenter implements MainContract.UserActionsListener {
 		long searchPosition = currentPosition - bufferMs;
 		
 		com.dimowner.audiorecorder.data.database.Timestamp previousTimestamp = null;
+		int previousTimestampIndex = -1;
 		for (int i = timestamps.size() - 1; i >= 0; i--) {
 			com.dimowner.audiorecorder.data.database.Timestamp ts = timestamps.get(i);
 			if (ts.getTimeMillis() < searchPosition) {
 				previousTimestamp = ts;
+				previousTimestampIndex = i;
 				break;
 			}
 		}
@@ -564,6 +578,11 @@ public class MainPresenter implements MainContract.UserActionsListener {
 			// Make final copies for lambda
 			final long timestampPosition = previousTimestamp.getTimeMillis();
 			final long duration = songDuration;
+			final int finalPreviousTimestampIndex = previousTimestampIndex;
+			
+			// Update current timestamps list for navigation
+			currentTimestamps = new ArrayList<>(timestamps);
+			currentTimestampIndex = finalPreviousTimestampIndex;
 			
 			// Seek to the previous timestamp
 			audioPlayer.seek(timestampPosition);
@@ -572,6 +591,10 @@ public class MainPresenter implements MainContract.UserActionsListener {
 			AndroidUtils.runOnUIThread(() -> {
 				if (view != null) {
 					view.onPlayProgress(timestampPosition, (int)(1000 * timestampPosition / duration));
+					// Update navigation display
+					view.showTimestampNavigation(currentTimestampIndex + 1, currentTimestamps.size());
+					// Update timestamp notes display
+					updateTimestampNotesDisplay();
 				}
 			});
 			
