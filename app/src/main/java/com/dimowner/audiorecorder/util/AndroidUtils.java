@@ -622,7 +622,71 @@ public class AndroidUtils {
 		return versionName;
 	}
 
+	public static void showTimestampEditDialog(Activity activity,
+													final int timestampId,
+													final String currentNote,
+													final OnTimestampNoteEditListener positiveBtnListener,
+													final View.OnClickListener negativeBtnListener) {
+		final AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(activity);
+		dialogBuilder.setCancelable(true);
+		View view = activity.getLayoutInflater().inflate(R.layout.dialog_rename, null, false);
+		
+		// Update dialog title
+		TextView titleText = view.findViewById(R.id.dialog_title);
+		titleText.setText(R.string.edit_timestamp_note);
+		
+		// Hide checkbox (not needed for timestamp editing)
+		CheckBox checkBox = view.findViewById(R.id.check_box);
+		checkBox.setVisibility(View.GONE);
+		
+		EditText editText = view.findViewById(R.id.input_name);
+		editText.setHint(R.string.timestamp_note_hint);
+		editText.setText(currentNote != null && !currentNote.equals("Tap to add note") ? currentNote : "");
+		editText.requestFocus();
+		editText.setSelection(editText.getText().length());
+		editText.addTextChangedListener(new TextWatcher() {
+			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+			@Override public void afterTextChanged(Editable s) {
+				// Allow longer text for notes (no strict limit like record names)
+			}
+			@Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
+		});
+		
+		dialogBuilder.setView(view);
+		AlertDialog alertDialog = dialogBuilder.create();
+		
+		if (negativeBtnListener != null) {
+			Button negativeBtn = view.findViewById(R.id.dialog_negative_btn);
+			negativeBtn.setOnClickListener(v -> {
+				negativeBtnListener.onClick(v);
+				alertDialog.dismiss();
+			});
+		} else {
+			view.findViewById(R.id.dialog_negative_btn).setVisibility(View.GONE);
+		}
+		
+		if (positiveBtnListener != null) {
+			Button positiveBtn = view.findViewById(R.id.dialog_positive_btn);
+			positiveBtn.setOnClickListener(v -> {
+				positiveBtnListener.onEdit(timestampId, editText.getText().toString());
+				alertDialog.dismiss();
+			});
+		} else {
+			view.findViewById(R.id.dialog_positive_btn).setVisibility(View.GONE);
+		}
+		
+		Window window = alertDialog.getWindow();
+		if (window != null) {
+			window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+		}
+		alertDialog.show();
+	}
+
 	public interface OnSetNameClickListener {
 		void onClick(String name);
+	}
+	
+	public interface OnTimestampNoteEditListener {
+		void onEdit(int timestampId, String note);
 	}
 }

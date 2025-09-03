@@ -627,6 +627,44 @@ public class MainPresenter implements MainContract.UserActionsListener {
 		com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "Timestamp counter reset to 0");
 	}
 
+	@Override
+	public void onCurrentTimestampNoteClick() {
+		if (currentTimestamps != null && currentTimestampIndex >= 0 && currentTimestampIndex < currentTimestamps.size()) {
+			Timestamp currentTimestamp = currentTimestamps.get(currentTimestampIndex);
+			if (view != null) {
+				view.showTimestampEditDialog(currentTimestamp.getId(), currentTimestamp.getDescription());
+			}
+		}
+	}
+
+	@Override
+	public void onTimestampNoteEdit(int timestampId, String newNote) {
+		loadingTasks.postRunnable(() -> {
+			boolean success = localRepository.updateTimestampDescription(timestampId, newNote);
+			AndroidUtils.runOnUIThread(() -> {
+				if (success) {
+					// Reload timestamps to get the updated note
+					long activeRecordId = prefs.getActiveRecord();
+					if (activeRecordId != Record.NO_ID) {
+						final Record rec = localRepository.getRecord((int) activeRecordId);
+						if (rec != null) {
+							final List<com.dimowner.audiorecorder.data.database.Timestamp> timestamps = localRepository.getTimestampsForRecord(rec.getId());
+							if (view != null) {
+								view.showTimestamps(timestamps);
+								// Update current timestamps list for navigation
+								currentTimestamps = new ArrayList<>(timestamps);
+								// Keep current index but update the display
+								updateTimestampNotesDisplay();
+							}
+						}
+					}
+				} else if (view != null) {
+					view.showError("Failed to update timestamp note");
+				}
+			});
+		});
+	}
+
 	private void updateCurrentTimestampIndex(long currentPlaybackMills) {
 		if (currentTimestamps == null || currentTimestamps.isEmpty()) {
 			return;
@@ -651,7 +689,56 @@ public class MainPresenter implements MainContract.UserActionsListener {
 				// Display 1-based index (current + 1) out of total
 				int displayIndex = currentTimestampIndex >= 0 ? currentTimestampIndex + 1 : 0;
 				view.showTimestampNavigation(displayIndex, currentTimestamps.size());
+				
+				// Update timestamp notes display
+				updateTimestampNotesDisplay();
 			}
+		}
+	}
+
+	private void updateTimestampNotesDisplay() {
+		if (view == null || currentTimestamps == null || currentTimestamps.isEmpty()) {
+			if (view != null) {
+				view.hideTimestampNotes();
+			}
+			return;
+		}
+
+		String currentNote = null;
+		String nextNote = null;
+
+		// Get current timestamp note
+		if (currentTimestampIndex >= 0 && currentTimestampIndex < currentTimestamps.size()) {
+			Timestamp currentTimestamp = currentTimestamps.get(currentTimestampIndex);
+			currentNote = currentTimestamp.getDescription();
+			if (currentNote == null || currentNote.trim().isEmpty()) {
+				currentNote = "Tap to add note";
+			}
+		}
+
+		// Get next timestamp note
+		int nextIndex = currentTimestampIndex + 1;
+		if (nextIndex < currentTimestamps.size()) {
+			Timestamp nextTimestamp = currentTimestamps.get(nextIndex);
+			String nextDescription = nextTimestamp.getDescription();
+			if (nextDescription != null && !nextDescription.trim().isEmpty()) {
+				nextNote = "Next: " + nextDescription;
+			} else {
+				nextNote = "Next: No note";
+			}
+		}
+
+		// Show notes if we have at least a current note
+		if (currentNote != null) {
+			view.showCurrentTimestampNote(currentNote);
+			if (nextNote != null) {
+				view.showNextTimestampNote(nextNote);
+			} else {
+				view.showNextTimestampNote("");
+			}
+			view.showTimestampNotes(currentNote, nextNote != null ? nextNote : "");
+		} else {
+			view.hideTimestampNotes();
 		}
 	}
 

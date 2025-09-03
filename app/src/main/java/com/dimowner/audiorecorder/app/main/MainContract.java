@@ -94,6 +94,12 @@ public interface MainContract {
 		void hideTimestampCounter();
 		void showTimestampNavigation(int current, int total);
 		void hideTimestampNavigation();
+		
+		void showTimestampNotes(String currentNote, String nextNote);
+		void hideTimestampNotes();
+		void showCurrentTimestampNote(String note);
+		void showNextTimestampNote(String note);
+		void showTimestampEditDialog(int timestampId, String currentNote);
 	}
 
 	interface UserActionsListener extends Contract.UserActionsListener<MainContract.View> {
@@ -116,6 +122,8 @@ public interface MainContract {
 		void onPlaybackSpeedClick();
 		void onTimestampCreated();
 		void resetTimestampCounter();
+		void onCurrentTimestampNoteClick();
+		void onTimestampNoteEdit(int timestampId, String newNote);
 
 		void renameRecord(long id, String name, String extension);
 

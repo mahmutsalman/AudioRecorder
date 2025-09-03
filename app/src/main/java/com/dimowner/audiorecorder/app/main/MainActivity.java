@@ -116,6 +116,9 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private FloatingActionButton btnTimestamp;
 	private TextView txtTimestampCounter;
 	private TextView txtTimestampNavigation;
+	private TextView txtCurrentTimestampNote;
+	private TextView txtNextTimestampNote;
+	private LinearLayout pnlTimestampNotes;
 	private ProgressBar progressBar;
 	private SeekBar playProgress;
 	private LinearLayout pnlImportProgress;
@@ -203,6 +206,9 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnTimestamp = findViewById(R.id.btn_timestamp);
 		txtTimestampCounter = findViewById(R.id.txt_timestamp_counter);
 		txtTimestampNavigation = findViewById(R.id.txt_timestamp_navigation);
+		txtCurrentTimestampNote = findViewById(R.id.txt_current_timestamp_note);
+		txtNextTimestampNote = findViewById(R.id.txt_next_timestamp_note);
+		pnlTimestampNotes = findViewById(R.id.pnl_timestamp_notes);
 		progressBar = findViewById(R.id.progress);
 		playProgress = findViewById(R.id.play_progress);
 		pnlImportProgress = findViewById(R.id.pnl_import_progress);
@@ -228,6 +234,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnImport.setOnClickListener(this);
 		btnTimestamp.setOnClickListener(this);
 		txtName.setOnClickListener(this);
+		txtCurrentTimestampNote.setOnClickListener(this);
 		space = getResources().getDimension(R.dimen.spacing_xnormal);
 
 		playProgress.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -400,6 +407,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			presenter.onRenameRecordClick();
 		} else if (id == R.id.btn_timestamp) {
 			createTimestamp();
+		} else if (id == R.id.txt_current_timestamp_note) {
+			presenter.onCurrentTimestampNoteClick();
 		}
 	}
 
@@ -850,6 +859,61 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	@Override
 	public void hideTimestampNavigation() {
 		txtTimestampNavigation.setVisibility(View.GONE);
+	}
+
+	@Override
+	public void showTimestampNotes(String currentNote, String nextNote) {
+		if (currentNote != null && !currentNote.trim().isEmpty()) {
+			txtCurrentTimestampNote.setText(currentNote);
+			txtCurrentTimestampNote.setVisibility(View.VISIBLE);
+			
+			if (nextNote != null && !nextNote.trim().isEmpty()) {
+				txtNextTimestampNote.setText(nextNote);
+				txtNextTimestampNote.setVisibility(View.VISIBLE);
+			} else {
+				txtNextTimestampNote.setVisibility(View.GONE);
+			}
+			
+			pnlTimestampNotes.setVisibility(View.VISIBLE);
+		} else {
+			hideTimestampNotes();
+		}
+	}
+
+	@Override
+	public void hideTimestampNotes() {
+		pnlTimestampNotes.setVisibility(View.GONE);
+		txtCurrentTimestampNote.setVisibility(View.GONE);
+		txtNextTimestampNote.setVisibility(View.GONE);
+	}
+
+	@Override
+	public void showCurrentTimestampNote(String note) {
+		if (note != null && !note.trim().isEmpty()) {
+			txtCurrentTimestampNote.setText(note);
+			txtCurrentTimestampNote.setVisibility(View.VISIBLE);
+		} else {
+			txtCurrentTimestampNote.setVisibility(View.GONE);
+		}
+	}
+
+	@Override
+	public void showNextTimestampNote(String note) {
+		if (note != null && !note.trim().isEmpty()) {
+			txtNextTimestampNote.setText(note);
+			txtNextTimestampNote.setVisibility(View.VISIBLE);
+		} else {
+			txtNextTimestampNote.setVisibility(View.GONE);
+		}
+	}
+
+	@Override
+	public void showTimestampEditDialog(int timestampId, String currentNote) {
+		AndroidUtils.showTimestampEditDialog(this, timestampId, currentNote, 
+			(id, note) -> presenter.onTimestampNoteEdit(id, note),
+			v -> {
+				// Cancel action - do nothing
+			});
 	}
 
 	@Override

@@ -295,4 +295,12 @@
 	</string-array>
 
 	<string name="app_widget_description">Start recording widget</string>
+	
+	<!-- Timestamp Notes -->
+	<string name="current_timestamp_note">Current timestamp note</string>
+	<string name="next_timestamp_note">Next timestamp note</string>
+	<string name="edit_timestamp_note">Edit timestamp note</string>
+	<string name="timestamp_note_hint">Enter note for this timestamp</string>
+	<string name="no_note">No note</string>
+	<string name="tap_to_add_note">Tap to add note</string>
 </resources>
