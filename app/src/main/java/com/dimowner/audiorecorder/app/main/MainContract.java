@@ -89,6 +89,11 @@ public interface MainContract {
 		void showRecordFileNotAvailable(String path);
 
 		void showPlaybackSpeed(float speed);
+		
+		void showTimestampCounter(int count);
+		void hideTimestampCounter();
+		void showTimestampNavigation(int current, int total);
+		void hideTimestampNavigation();
 	}
 
 	interface UserActionsListener extends Contract.UserActionsListener<MainContract.View> {
@@ -109,6 +114,8 @@ public interface MainContract {
 		void onPreviousTimestampClick();
 		void onNextTimestampClick();
 		void onPlaybackSpeedClick();
+		void onTimestampCreated();
+		void resetTimestampCounter();
 
 		void renameRecord(long id, String name, String extension);
 

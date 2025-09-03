@@ -114,6 +114,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private ImageButton btnShare;
 	private ImageButton btnImport;
 	private FloatingActionButton btnTimestamp;
+	private TextView txtTimestampCounter;
+	private TextView txtTimestampNavigation;
 	private ProgressBar progressBar;
 	private SeekBar playProgress;
 	private LinearLayout pnlImportProgress;
@@ -199,6 +201,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnShare = findViewById(R.id.btn_share);
 		btnImport = findViewById(R.id.btn_import);
 		btnTimestamp = findViewById(R.id.btn_timestamp);
+		txtTimestampCounter = findViewById(R.id.txt_timestamp_counter);
+		txtTimestampNavigation = findViewById(R.id.txt_timestamp_navigation);
 		progressBar = findViewById(R.id.progress);
 		playProgress = findViewById(R.id.play_progress);
 		pnlImportProgress = findViewById(R.id.pnl_import_progress);
@@ -474,6 +478,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		playProgress.setProgress(0);
 		playProgress.setEnabled(false);
 		btnTimestamp.setVisibility(View.VISIBLE);
+		// Reset and show timestamp counter when recording starts
+		presenter.resetTimestampCounter();
 		txtDuration.setText(R.string.zero_time);
 		waveformView.setVisibility(View.GONE);
 		recordingWaveformView.setVisibility(View.VISIBLE);
@@ -499,6 +505,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnRecordingStop.setVisibility(View.GONE);
 		btnRecordingStop.setEnabled(false);
 		btnTimestamp.setVisibility(View.GONE);
+		// Hide timestamp counter when recording stops
+		hideTimestampCounter();
 		waveformView.setVisibility(View.VISIBLE);
 		recordingWaveformView.setVisibility(View.GONE);
 		recordingWaveformView.reset();
@@ -604,6 +612,9 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		intent.putExtra(RecordingService.EXTRAS_KEY_TIMESTAMP_DESCRIPTION, "");
 		DebugLogger.log("MainActivity", "Sending ACTION_CREATE_TIMESTAMP intent to RecordingService");
 		startService(intent);
+		
+		// Notify presenter that timestamp was created to increment counter
+		presenter.onTimestampCreated();
 	}
 
 	@Override
@@ -811,6 +822,34 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	@Override
 	public void showPlaybackSpeed(float speed) {
 		btnPlaybackSpeed.setText(String.format(Locale.getDefault(), "%.1fx", speed));
+	}
+
+	@Override
+	public void showTimestampCounter(int count) {
+		txtTimestampCounter.setText(String.valueOf(count));
+		txtTimestampCounter.setVisibility(View.VISIBLE);
+		txtTimestampNavigation.setVisibility(View.GONE);
+	}
+
+	@Override
+	public void hideTimestampCounter() {
+		txtTimestampCounter.setVisibility(View.GONE);
+	}
+
+	@Override
+	public void showTimestampNavigation(int current, int total) {
+		if (total > 0) {
+			txtTimestampNavigation.setText(String.format(Locale.getDefault(), "%d/%d", current, total));
+			txtTimestampNavigation.setVisibility(View.VISIBLE);
+		} else {
+			txtTimestampNavigation.setVisibility(View.GONE);
+		}
+		txtTimestampCounter.setVisibility(View.GONE);
+	}
+
+	@Override
+	public void hideTimestampNavigation() {
+		txtTimestampNavigation.setVisibility(View.GONE);
 	}
 
 	@Override

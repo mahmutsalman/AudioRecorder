@@ -40,6 +40,7 @@ import com.dimowner.audiorecorder.data.FileRepository;
 import com.dimowner.audiorecorder.data.Prefs;
 import com.dimowner.audiorecorder.data.database.LocalRepository;
 import com.dimowner.audiorecorder.data.database.Record;
+import com.dimowner.audiorecorder.data.database.Timestamp;
 import com.dimowner.audiorecorder.exception.AppException;
 import com.dimowner.audiorecorder.exception.CantCreateFileException;
 import com.dimowner.audiorecorder.exception.ErrorParser;
@@ -50,6 +51,7 @@ import com.dimowner.audiorecorder.util.TimeUtils;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -79,6 +81,11 @@ public class MainPresenter implements MainContract.UserActionsListener {
 	/** Flag true defines that presenter called to show import progress when view was not bind.
 	 * And after view bind we need to show import progress.*/
 	private boolean showImportProgress = false;
+
+	// Timestamp counter and navigation tracking
+	private int timestampCounter = 0;
+	private int currentTimestampIndex = -1;
+	private List<Timestamp> currentTimestamps = new ArrayList<>();
 
 	public MainPresenter(final Prefs prefs, final FileRepository fileRepository,
 						 final LocalRepository localRepository,
@@ -129,6 +136,10 @@ public class MainPresenter implements MainContract.UserActionsListener {
 					if (view != null) {
 						view.showRecordingStart();
 						view.keepScreenOn(prefs.isKeepScreenOn());
+						
+						// Show timestamp counter and hide navigation during recording
+						view.hideTimestampNavigation();
+						view.showTimestampCounter(timestampCounter);
 					}
 					updateInformation(
 							prefs.getSettingRecordingFormat(),
@@ -174,6 +185,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 						view.keepScreenOn(false);
 						view.hideProgress();
 						view.showRecordingStop();
+						view.hideTimestampCounter(); // Hide counter when recording stops
 					}
 				}
 
@@ -217,6 +229,12 @@ public class MainPresenter implements MainContract.UserActionsListener {
 							if (view != null && record != null) {
 								view.startPlaybackService(record.getName());
 								view.showPlayStart(true);
+								
+								// Show navigation if timestamps are available
+								if (currentTimestamps != null && !currentTimestamps.isEmpty()) {
+									int displayIndex = currentTimestampIndex >= 0 ? currentTimestampIndex + 1 : 0;
+									view.showTimestampNavigation(displayIndex, currentTimestamps.size());
+								}
 							}
 						});
 					});
@@ -230,16 +248,21 @@ public class MainPresenter implements MainContract.UserActionsListener {
 						if (duration > 0) {
 							view.onPlayProgress(mills, (int) (1000 * mills / duration));
 						}
+						
+						// Update timestamp navigation based on current playback position
+						updateCurrentTimestampIndex(mills);
 					}
 				}
 
 				@Override
 				public void onStopPlay() {
 					currentPlaybackPosition = 0;
+					currentTimestampIndex = -1; // Reset timestamp index
 					if (view != null) {
 						audioPlayer.seek(0);
 						view.showPlayStop();
 						view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(songDuration / 1000));
+						view.hideTimestampNavigation(); // Hide navigation when playback stops
 					}
 				}
 
@@ -587,6 +610,52 @@ public class MainPresenter implements MainContract.UserActionsListener {
 	}
 
 	@Override
+	public void onTimestampCreated() {
+		timestampCounter++;
+		if (view != null) {
+			view.showTimestampCounter(timestampCounter);
+		}
+		com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "Timestamp created, counter: " + timestampCounter);
+	}
+
+	@Override
+	public void resetTimestampCounter() {
+		timestampCounter = 0;
+		if (view != null) {
+			view.showTimestampCounter(timestampCounter);
+		}
+		com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "Timestamp counter reset to 0");
+	}
+
+	private void updateCurrentTimestampIndex(long currentPlaybackMills) {
+		if (currentTimestamps == null || currentTimestamps.isEmpty()) {
+			return;
+		}
+
+		int newIndex = -1;
+		
+		// Find the closest timestamp that is smaller than or equal to the current playback position
+		for (int i = 0; i < currentTimestamps.size(); i++) {
+			long timestampMills = currentTimestamps.get(i).getTimeMillis();
+			if (timestampMills <= currentPlaybackMills) {
+				newIndex = i;
+			} else {
+				break; // Timestamps should be sorted, so we can break here
+			}
+		}
+
+		// Update navigation if the index changed
+		if (newIndex != currentTimestampIndex) {
+			currentTimestampIndex = newIndex;
+			if (view != null && currentTimestamps.size() > 0) {
+				// Display 1-based index (current + 1) out of total
+				int displayIndex = currentTimestampIndex >= 0 ? currentTimestampIndex + 1 : 0;
+				view.showTimestampNavigation(displayIndex, currentTimestamps.size());
+			}
+		}
+	}
+
+	@Override
 	public void renameRecord(final long id, final String newName, final String extension) {
 		com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "renameRecord called: id=" + id + ", newName='" + newName + "', extension='" + extension + "'");
 		if (id < 0 || newName == null || newName.isEmpty()) {
@@ -720,6 +789,11 @@ public class MainPresenter implements MainContract.UserActionsListener {
 							view.showName(rec.getName());
 							view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(songDuration / 1000));
 							view.showTimestamps(timestamps);
+							
+							// Update current timestamps list for navigation
+							currentTimestamps = new ArrayList<>(timestamps);
+							currentTimestampIndex = -1; // Reset current index
+							
 							view.showOptionsMenu();
 							view.hideProgress();
 							updateInformation(rec.getFormat(), rec.getSampleRate(), rec.getSize());
@@ -731,6 +805,12 @@ public class MainPresenter implements MainContract.UserActionsListener {
 							view.hideProgress();
 							view.showWaveForm(new int[]{}, 0, 0);
 							view.showTimestamps(new java.util.ArrayList<>());
+							
+							// Clear timestamps list and navigation
+							currentTimestamps = new ArrayList<>();
+							currentTimestampIndex = -1;
+							view.hideTimestampNavigation();
+							
 							view.showName("");
 							view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(0));
 							view.hideOptionsMenu();
@@ -765,6 +845,16 @@ public class MainPresenter implements MainContract.UserActionsListener {
 							view.showName(rec.getName());
 							view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(songDuration / 1000));
 							view.showTimestamps(timestamps);
+							
+							// Update current timestamps list for navigation
+							currentTimestamps = new ArrayList<>(timestamps);
+							currentTimestampIndex = -1; // Reset current index
+							
+							// Reset timestamp counter (used for recording, not playback)
+							timestampCounter = 0;
+							view.hideTimestampCounter();
+							view.hideTimestampNavigation();
+							
 							view.showOptionsMenu();
 							view.hideProgress();
 							updateInformation(rec.getFormat(), rec.getSampleRate(), rec.getSize());
@@ -777,6 +867,12 @@ public class MainPresenter implements MainContract.UserActionsListener {
 							view.hideProgress();
 							view.showWaveForm(new int[]{}, 0, 0);
 							view.showTimestamps(new java.util.ArrayList<>());
+							
+							// Clear timestamps list and navigation
+							currentTimestamps = new ArrayList<>();
+							currentTimestampIndex = -1;
+							view.hideTimestampNavigation();
+							
 							view.showName("");
 							view.showDuration(TimeUtils.formatTimeIntervalHourMinSec2(0));
 							view.hideOptionsMenu();
