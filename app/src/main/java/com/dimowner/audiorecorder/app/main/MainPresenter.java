@@ -74,6 +74,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 	private long songDuration = 0;
 	private RecordDataSource recordDataSource = null;
 	private boolean listenPlaybackProgress = true;
+	private long currentPlaybackPosition = 0;
 
 	/** Flag true defines that presenter called to show import progress when view was not bind.
 	 * And after view bind we need to show import progress.*/
@@ -223,6 +224,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 
 				@Override
 				public void onPlayProgress(final long mills) {
+					currentPlaybackPosition = mills;
 					if (view != null && listenPlaybackProgress) {
 						long duration = songDuration/1000;
 						if (duration > 0) {
@@ -233,6 +235,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 
 				@Override
 				public void onStopPlay() {
+					currentPlaybackPosition = 0;
 					if (view != null) {
 						audioPlayer.seek(0);
 						view.showPlayStop();
@@ -242,6 +245,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 
 				@Override
 				public void onPausePlay() {
+					currentPlaybackPosition = audioPlayer.getPauseTime();
 					if (view != null) {
 						view.showPlayPause();
 					}
@@ -249,6 +253,7 @@ public class MainPresenter implements MainContract.UserActionsListener {
 
 				@Override
 				public void onSeek(long mills) {
+					currentPlaybackPosition = mills;
 				}
 
 				@Override
@@ -424,6 +429,65 @@ public class MainPresenter implements MainContract.UserActionsListener {
 	@Override
 	public void stopPlayback() {
 		audioPlayer.stop();
+	}
+
+	@Override
+	public void onNextTimestampClick() {
+		com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "onNextTimestampClick called");
+		
+		// Get current playback position
+		long currentPosition = audioPlayer.isPaused() ? audioPlayer.getPauseTime() : currentPlaybackPosition;
+		
+		// Get current active record
+		final Record record = recordDataSource.getActiveRecord();
+		if (record == null) {
+			com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "No active record found");
+			return;
+		}
+		
+		// Load timestamps for current record
+		final List<com.dimowner.audiorecorder.data.database.Timestamp> timestamps = localRepository.getTimestampsForRecord(record.getId());
+		if (timestamps == null || timestamps.isEmpty()) {
+			com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "No timestamps found for record " + record.getId());
+			return;
+		}
+		
+		// Find next timestamp after current position
+		com.dimowner.audiorecorder.data.database.Timestamp nextTimestamp = null;
+		for (com.dimowner.audiorecorder.data.database.Timestamp ts : timestamps) {
+			if (ts.getTimeMillis() > currentPosition) {
+				nextTimestamp = ts;
+				break;
+			}
+		}
+		
+		if (nextTimestamp != null) {
+			com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "Navigating to next timestamp at " + nextTimestamp.getTimeMillis() + "ms");
+			
+			// Remember the current playback state
+			boolean wasPlaying = audioPlayer.isPlaying();
+			
+			// Make final copies for lambda
+			final long timestampPosition = nextTimestamp.getTimeMillis();
+			final long duration = songDuration;
+			
+			// Seek to the next timestamp
+			audioPlayer.seek(timestampPosition);
+			
+			// Update the waveform view to show the new position
+			AndroidUtils.runOnUIThread(() -> {
+				if (view != null) {
+					view.onPlayProgress(timestampPosition, (int)(1000 * timestampPosition / duration));
+				}
+			});
+			
+			// If audio was paused before, keep it paused after seeking
+			if (!wasPlaying && audioPlayer.isPlaying()) {
+				audioPlayer.pause();
+			}
+		} else {
+			com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "No more timestamps after current position " + currentPosition + "ms");
+		}
 	}
 
 	@Override

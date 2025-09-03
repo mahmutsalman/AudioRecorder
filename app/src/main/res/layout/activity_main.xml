@@ -187,6 +187,19 @@
 					android:scaleType="center"
 					android:visibility="gone"
 					android:src="@drawable/ic_stop"/>
+
+			<ImageButton
+					android:id="@+id/btn_next_timestamp"
+					android:layout_width="@dimen/notification_btn"
+					android:layout_height="@dimen/notification_btn"
+					android:adjustViewBounds="true"
+					android:background="?android:selectableItemBackgroundBorderless"
+					android:contentDescription="@string/next_timestamp"
+					android:layout_gravity="bottom|center"
+					android:layout_marginStart="54dp"
+					android:scaleType="center"
+					android:visibility="gone"
+					android:src="@drawable/ic_skip_next_timestamp"/>
 		</FrameLayout>
 
 	</LinearLayout>

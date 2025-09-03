@@ -104,6 +104,7 @@ public interface MainContract {
 		void onPlaybackClick(Context context, boolean isStorageAvailable);
 		void seekPlayback(long mills);
 		void stopPlayback();
+		void onNextTimestampClick();
 
 		void renameRecord(long id, String name, String extension);
 

@@ -105,6 +105,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private TextView txtRecordInfo;
 	private ImageButton btnPlay;
 	private ImageButton btnStop;
+	private ImageButton btnNextTimestamp;
 	private Button btnRecord;
 	private Button btnRecordingStop;
 	private ImageButton btnShare;
@@ -187,6 +188,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnRecord = findViewById(R.id.btn_record);
 		btnRecordingStop = findViewById(R.id.btn_record_stop);
 		btnStop = findViewById(R.id.btn_stop);
+		btnNextTimestamp = findViewById(R.id.btn_next_timestamp);
 		ImageButton btnRecordsList = findViewById(R.id.btn_records_list);
 		ImageButton btnSettings = findViewById(R.id.btn_settings);
 		btnShare = findViewById(R.id.btn_share);
@@ -208,6 +210,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		btnRecord.setOnClickListener(this);
 		btnRecordingStop.setOnClickListener(this);
 		btnStop.setOnClickListener(this);
+		btnNextTimestamp.setOnClickListener(this);
 		btnRecordsList.setOnClickListener(this);
 		btnSettings.setOnClickListener(this);
 		btnShare.setOnClickListener(this);
@@ -362,6 +365,8 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			presenter.stopRecording();
 		} else if (id == R.id.btn_stop) {
 			presenter.stopPlayback();
+		} else if (id == R.id.btn_next_timestamp) {
+			presenter.onNextTimestampClick();
 		} else if (id == R.id.btn_records_list) {
 			startActivity(RecordsActivity.getStartIntent(getApplicationContext()));
 		} else if (id == R.id.btn_settings) {
@@ -603,6 +608,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 				@Override public void onAnimationStart(Animator animation) { }
 				@Override public void onAnimationEnd(Animator animation) {
 					btnStop.setVisibility(View.VISIBLE);
+					btnNextTimestamp.setVisibility(View.VISIBLE);
 					btnPlay.setImageResource(R.drawable.ic_pause);
 				}
 				@Override public void onAnimationCancel(Animator animation) { }
@@ -611,6 +617,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		} else {
 			btnPlay.setTranslationX(-space);
 			btnStop.setVisibility(View.VISIBLE);
+			btnNextTimestamp.setVisibility(View.VISIBLE);
 			btnPlay.setImageResource(R.drawable.ic_pause);
 		}
 	}
@@ -618,6 +625,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	@Override
 	public void showPlayPause() {
 		btnStop.setVisibility(View.VISIBLE);
+		btnNextTimestamp.setVisibility(View.VISIBLE);
 		btnPlay.setTranslationX(-space);
 		btnPlay.setImageResource(R.drawable.ic_play);
 	}
@@ -633,6 +641,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			@Override public void onAnimationStart(Animator animation) { }
 			@Override public void onAnimationEnd(Animator animation) {
 				btnStop.setVisibility(View.GONE);
+				btnNextTimestamp.setVisibility(View.GONE);
 			}
 			@Override public void onAnimationCancel(Animator animation) { }
 			@Override public void onAnimationRepeat(Animator animation) { }
