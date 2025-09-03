@@ -126,6 +126,54 @@
 			android:gravity="center"
 			android:orientation="vertical">
 
+		<!-- Timestamp Notes Display -->
+		<LinearLayout
+				android:id="@+id/pnl_timestamp_notes"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:layout_marginStart="@dimen/spacing_normal"
+				android:layout_marginEnd="@dimen/spacing_normal"
+				android:layout_marginBottom="@dimen/spacing_normal"
+				android:orientation="vertical"
+				android:visibility="gone"
+				tools:visibility="visible">
+
+			<!-- Current Timestamp Note -->
+			<TextView
+					android:id="@+id/txt_current_timestamp_note"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:padding="@dimen/spacing_normal"
+					android:gravity="center"
+					android:textColor="@color/white"
+					android:textSize="@dimen/text_medium"
+					android:textStyle="bold"
+					android:maxLines="2"
+					android:ellipsize="end"
+					android:clickable="true"
+					android:focusable="true"
+					android:foreground="?android:selectableItemBackground"
+					android:background="@drawable/purple_border_background"
+					tools:text="My note about current timestamp is this for example."/>
+
+			<!-- Next Timestamp Note -->
+			<TextView
+					android:id="@+id/txt_next_timestamp_note"
+					android:layout_width="match_parent"
+					android:layout_height="wrap_content"
+					android:layout_marginTop="@dimen/spacing_small"
+					android:padding="@dimen/spacing_normal"
+					android:gravity="center"
+					android:textColor="@color/white"
+					android:textSize="@dimen/text_small"
+					android:maxLines="1"
+					android:ellipsize="end"
+					android:alpha="0.8"
+					android:background="@color/transparent"
+					tools:text="My note about next timestamp is this for example."/>
+
+		</LinearLayout>
+
 		<FrameLayout
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
@@ -440,54 +488,6 @@
 				tools:text="2/10"
 				tools:visibility="visible"/>
 
-		<!-- Timestamp Notes Display -->
-		<LinearLayout
-				android:id="@+id/pnl_timestamp_notes"
-				android:layout_width="match_parent"
-				android:layout_height="wrap_content"
-				android:layout_gravity="center|top"
-				android:layout_marginStart="@dimen/spacing_normal"
-				android:layout_marginEnd="@dimen/spacing_normal"
-				android:layout_marginTop="@dimen/spacing_double"
-				android:orientation="vertical"
-				android:visibility="gone"
-				tools:visibility="visible">
-
-			<!-- Current Timestamp Note -->
-			<TextView
-					android:id="@+id/txt_current_timestamp_note"
-					android:layout_width="match_parent"
-					android:layout_height="wrap_content"
-					android:background="@drawable/round_button_white"
-					android:padding="@dimen/spacing_normal"
-					android:gravity="center"
-					android:textColor="@color/text_primary_dark"
-					android:textSize="@dimen/text_medium"
-					android:textStyle="bold"
-					android:maxLines="2"
-					android:ellipsize="end"
-					android:clickable="true"
-					android:focusable="true"
-					android:foreground="?android:selectableItemBackground"
-					tools:text="Current timestamp: Meeting introduction"/>
-
-			<!-- Next Timestamp Note -->
-			<TextView
-					android:id="@+id/txt_next_timestamp_note"
-					android:layout_width="match_parent"
-					android:layout_height="wrap_content"
-					android:layout_marginTop="@dimen/spacing_small"
-					android:background="@drawable/round_button_white"
-					android:padding="@dimen/spacing_small"
-					android:gravity="center"
-					android:textColor="@color/text_primary_light2"
-					android:textSize="@dimen/text_small"
-					android:maxLines="1"
-					android:ellipsize="end"
-					android:alpha="0.8"
-					tools:text="Next: Discussion about project timeline"/>
-
-		</LinearLayout>
 
 	</FrameLayout>
 
