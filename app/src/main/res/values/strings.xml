@@ -239,6 +239,7 @@
 	<string name="button_resume">Resume</string>
 	<string name="button_finish">Finish</string>
 	<string name="button_create_timestamp">Create timestamp</string>
+	<string name="previous_timestamp">Previous timestamp</string>
 	<string name="next_timestamp">Next timestamp</string>
 
 	<!-- Shown in the 'About' window of the app. -->

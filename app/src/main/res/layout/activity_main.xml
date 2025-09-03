@@ -195,6 +195,18 @@
 						android:src="@drawable/ic_stop"/>
 
 				<ImageButton
+						android:id="@+id/btn_previous_timestamp"
+						android:layout_width="@dimen/notification_btn"
+						android:layout_height="@dimen/notification_btn"
+						android:layout_marginStart="@dimen/spacing_normal"
+						android:adjustViewBounds="true"
+						android:background="?android:selectableItemBackgroundBorderless"
+						android:contentDescription="@string/previous_timestamp"
+						android:scaleType="center"
+						android:visibility="gone"
+						android:src="@drawable/ic_skip_previous_timestamp"/>
+
+				<ImageButton
 						android:id="@+id/btn_next_timestamp"
 						android:layout_width="@dimen/notification_btn"
 						android:layout_height="@dimen/notification_btn"

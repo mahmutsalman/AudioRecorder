@@ -491,6 +491,70 @@ public class MainPresenter implements MainContract.UserActionsListener {
 	}
 
 	@Override
+	public void onPreviousTimestampClick() {
+		com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "onPreviousTimestampClick called");
+		
+		// Get current playback position
+		long currentPosition = audioPlayer.isPaused() ? audioPlayer.getPauseTime() : currentPlaybackPosition;
+		
+		// Get current active record
+		final Record record = recordDataSource.getActiveRecord();
+		if (record == null) {
+			com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "No active record found");
+			return;
+		}
+		
+		// Load timestamps for current record
+		final List<com.dimowner.audiorecorder.data.database.Timestamp> timestamps = localRepository.getTimestampsForRecord(record.getId());
+		if (timestamps == null || timestamps.isEmpty()) {
+			com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "No timestamps found for record " + record.getId());
+			return;
+		}
+		
+		// Find previous timestamp before current position
+		// Add small buffer (1 second) - if we're very close to a timestamp, go to the one before it
+		final long bufferMs = 1000;
+		long searchPosition = currentPosition - bufferMs;
+		
+		com.dimowner.audiorecorder.data.database.Timestamp previousTimestamp = null;
+		for (int i = timestamps.size() - 1; i >= 0; i--) {
+			com.dimowner.audiorecorder.data.database.Timestamp ts = timestamps.get(i);
+			if (ts.getTimeMillis() < searchPosition) {
+				previousTimestamp = ts;
+				break;
+			}
+		}
+		
+		if (previousTimestamp != null) {
+			com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "Navigating to previous timestamp at " + previousTimestamp.getTimeMillis() + "ms");
+			
+			// Remember the current playback state
+			boolean wasPlaying = audioPlayer.isPlaying();
+			
+			// Make final copies for lambda
+			final long timestampPosition = previousTimestamp.getTimeMillis();
+			final long duration = songDuration;
+			
+			// Seek to the previous timestamp
+			audioPlayer.seek(timestampPosition);
+			
+			// Update the waveform view to show the new position
+			AndroidUtils.runOnUIThread(() -> {
+				if (view != null) {
+					view.onPlayProgress(timestampPosition, (int)(1000 * timestampPosition / duration));
+				}
+			});
+			
+			// If audio was paused before, keep it paused after seeking
+			if (!wasPlaying && audioPlayer.isPlaying()) {
+				audioPlayer.pause();
+			}
+		} else {
+			com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "No timestamps before current position " + currentPosition + "ms (with buffer)");
+		}
+	}
+
+	@Override
 	public void renameRecord(final long id, final String newName, final String extension) {
 		com.dimowner.audiorecorder.util.DebugLogger.log("MainPresenter", "renameRecord called: id=" + id + ", newName='" + newName + "', extension='" + extension + "'");
 		if (id < 0 || newName == null || newName.isEmpty()) {
