@@ -163,43 +163,50 @@
 					android:layout_gravity="center"
 					tools:visibility="visible"/>
 
-			<ImageButton
-					android:id="@+id/btn_play"
-					android:layout_width="@dimen/notification_btn"
-					android:layout_height="@dimen/notification_btn"
-					android:adjustViewBounds="true"
-					android:background="?android:selectableItemBackgroundBorderless"
-					android:contentDescription="@null"
+			<!-- Playback Controls Container -->
+			<LinearLayout
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
 					android:layout_gravity="bottom|center"
-					android:scaleType="center"
-					android:visibility="invisible"
-					android:src="@drawable/ic_play"/>
+					android:orientation="horizontal"
+					android:gravity="center">
 
-			<ImageButton
-					android:id="@+id/btn_stop"
-					android:layout_width="@dimen/notification_btn"
-					android:layout_height="@dimen/notification_btn"
-					android:adjustViewBounds="true"
-					android:background="?android:selectableItemBackgroundBorderless"
-					android:contentDescription="@null"
-					android:layout_gravity="bottom|center"
-					android:layout_marginStart="27dp"
-					android:scaleType="center"
-					android:visibility="gone"
-					android:src="@drawable/ic_stop"/>
+				<ImageButton
+						android:id="@+id/btn_play"
+						android:layout_width="@dimen/notification_btn"
+						android:layout_height="@dimen/notification_btn"
+						android:adjustViewBounds="true"
+						android:background="?android:selectableItemBackgroundBorderless"
+						android:contentDescription="@null"
+						android:scaleType="center"
+						android:visibility="invisible"
+						android:src="@drawable/ic_play"/>
 
-			<ImageButton
-					android:id="@+id/btn_next_timestamp"
-					android:layout_width="@dimen/notification_btn"
-					android:layout_height="@dimen/notification_btn"
-					android:adjustViewBounds="true"
-					android:background="?android:selectableItemBackgroundBorderless"
-					android:contentDescription="@string/next_timestamp"
-					android:layout_gravity="bottom|center"
-					android:layout_marginStart="54dp"
-					android:scaleType="center"
-					android:visibility="gone"
-					android:src="@drawable/ic_skip_next_timestamp"/>
+				<ImageButton
+						android:id="@+id/btn_stop"
+						android:layout_width="@dimen/notification_btn"
+						android:layout_height="@dimen/notification_btn"
+						android:layout_marginStart="@dimen/spacing_normal"
+						android:adjustViewBounds="true"
+						android:background="?android:selectableItemBackgroundBorderless"
+						android:contentDescription="@null"
+						android:scaleType="center"
+						android:visibility="gone"
+						android:src="@drawable/ic_stop"/>
+
+				<ImageButton
+						android:id="@+id/btn_next_timestamp"
+						android:layout_width="@dimen/notification_btn"
+						android:layout_height="@dimen/notification_btn"
+						android:layout_marginStart="@dimen/spacing_normal"
+						android:adjustViewBounds="true"
+						android:background="?android:selectableItemBackgroundBorderless"
+						android:contentDescription="@string/next_timestamp"
+						android:scaleType="center"
+						android:visibility="gone"
+						android:src="@drawable/ic_skip_next_timestamp"/>
+
+			</LinearLayout>
 		</FrameLayout>
 
 	</LinearLayout>
