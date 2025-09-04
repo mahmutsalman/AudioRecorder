@@ -43,10 +43,22 @@ import com.dimowner.audiorecorder.audio.player.PlayerContractNew;
 import com.dimowner.audiorecorder.exception.AppException;
 import com.dimowner.audiorecorder.util.ExtensionsKt;
 import com.dimowner.audiorecorder.util.TimeUtils;
+import com.dimowner.audiorecorder.data.database.LocalRepository;
+import com.dimowner.audiorecorder.data.database.Record;
+import com.dimowner.audiorecorder.data.RecordDataSource;
+import com.dimowner.audiorecorder.data.database.Timestamp;
+
+import java.util.List;
 
 import org.jetbrains.annotations.NotNull;
 
 import androidx.core.app.NotificationManagerCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
+import android.support.v4.media.MediaMetadataCompat;
+import androidx.media.VolumeProviderCompat;
+import android.content.ComponentName;
+import com.dimowner.audiorecorder.util.VolumeDebugLogger;
 import timber.log.Timber;
 
 public class PlaybackService extends Service {
@@ -59,6 +71,13 @@ public class PlaybackService extends Service {
 	public static final String ACTION_PAUSE_PLAYBACK = "ACTION_PAUSE_PLAYBACK";
 
 	public static final String ACTION_CLOSE = "ACTION_CLOSE";
+	
+	// Broadcast actions for timestamp navigation when screen is locked
+	public static final String ACTION_NEXT_TIMESTAMP = "com.dimowner.audiorecorder.ACTION_NEXT_TIMESTAMP";
+	public static final String ACTION_PREVIOUS_TIMESTAMP = "com.dimowner.audiorecorder.ACTION_PREVIOUS_TIMESTAMP";
+	
+	// Action for refreshing volume navigation preference
+	public static final String ACTION_REFRESH_VOLUME_NAV = "ACTION_REFRESH_VOLUME_NAV";
 
 	public static final String EXTRAS_KEY_RECORD_NAME = "record_name";
 
@@ -73,6 +92,14 @@ public class PlaybackService extends Service {
 	private PlayerContractNew.Player audioPlayer;
 	private PlayerContractNew.PlayerCallback playerCallback;
 	private ColorMap colorMap;
+	
+	// Database access for timestamp navigation
+	private LocalRepository localRepository;
+	private RecordDataSource recordDataSource;
+	
+	// MediaSession for handling volume buttons when screen is locked
+	private MediaSessionCompat mediaSession;
+	private VolumeProviderCompat volumeProvider;
 
 	public PlaybackService() {
 	}
@@ -95,6 +122,8 @@ public class PlaybackService extends Service {
 
 		audioPlayer = ARApplication.getInjector().provideAudioPlayer();
 		colorMap = ARApplication.getInjector().provideColorMap(getApplicationContext());
+		localRepository = ARApplication.getInjector().provideLocalRepository(getApplicationContext());
+		recordDataSource = ARApplication.getInjector().provideRecordDataSource(getApplicationContext());
 
 		if (playerCallback == null) {
 			playerCallback = new PlayerContractNew.PlayerCallback() {
@@ -115,6 +144,9 @@ public class PlaybackService extends Service {
 			};
 			this.audioPlayer.addPlayerCallback(playerCallback);
 		}
+		
+		// Initialize MediaSession for handling volume buttons when screen is locked
+		initializeMediaSession();
 	}
 
 	@Override
@@ -140,6 +172,10 @@ public class PlaybackService extends Service {
 					case ACTION_CLOSE:
 						audioPlayer.stop();
 						stopForegroundService();
+						break;
+					case ACTION_REFRESH_VOLUME_NAV:
+						// Refresh MediaSession state when volume navigation preference changes
+						updateMediaSessionState();
 						break;
 				}
 			}
@@ -242,6 +278,14 @@ public class PlaybackService extends Service {
 
 	public void stopForegroundService() {
 		audioPlayer.removePlayerCallback(playerCallback);
+		
+		// Clean up MediaSession
+		if (mediaSession != null) {
+			mediaSession.setActive(false);
+			mediaSession.release();
+			mediaSession = null;
+		}
+		
 		stopForeground(true);
 		stopSelf();
 		started = false;
@@ -316,6 +360,216 @@ public class PlaybackService extends Service {
 				remoteViewsSmall.setImageViewResource(R.id.btn_pause, R.drawable.ic_pause_dark);
 			}
 			notificationManager.notify(NOTIF_ID, buildNotification());
+		}
+	}
+	
+	/**
+	 * Initialize MediaSession for handling volume buttons when screen is locked
+	 */
+	private void initializeMediaSession() {
+		VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.initializeMediaSession", "Creating MediaSession");
+		
+		// Create MediaSession
+		mediaSession = new MediaSessionCompat(this, "PlaybackService");
+		
+		// Create VolumeProvider for handling volume button events
+		volumeProvider = new VolumeProviderCompat(
+			VolumeProviderCompat.VOLUME_CONTROL_RELATIVE, // Allow relative volume changes
+			100, // Max volume (not actually used for navigation)
+			50   // Current volume (not actually used for navigation)
+		) {
+			@Override
+			public void onAdjustVolume(int direction) {
+				String directionStr = direction > 0 ? "UP" : (direction < 0 ? "DOWN" : "ZERO");
+				VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.onAdjustVolume", 
+					String.format("Direction: %s (%d) | VolumeNav: %s", directionStr, direction, isVolumeNavigationEnabled()));
+				
+				if (isVolumeNavigationEnabled()) {
+					// Handle volume button as timestamp navigation
+					if (direction > 0) {
+						// Volume Up = Previous timestamp (reverse like typical audio apps)
+						VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.onAdjustVolume", "Executing Previous Timestamp navigation");
+						navigateToPreviousTimestamp();
+						// Also send broadcast for UI updates when MainActivity is active
+						sendTimestampNavigationBroadcast(ACTION_PREVIOUS_TIMESTAMP);
+					} else if (direction < 0) {
+						// Volume Down = Next timestamp
+						VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.onAdjustVolume", "Executing Next Timestamp navigation");
+						navigateToNextTimestamp();
+						// Also send broadcast for UI updates when MainActivity is active
+						sendTimestampNavigationBroadcast(ACTION_NEXT_TIMESTAMP);
+					}
+				} else {
+					VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.onAdjustVolume", "Volume navigation disabled - no action taken");
+				}
+			}
+		};
+		
+		// Set up MediaSession but don't activate yet (will activate when needed)
+		mediaSession.setPlaybackToRemote(volumeProvider);
+		
+		// Set up MediaMetadata so system recognizes this as an active media session
+		MediaMetadataCompat.Builder metadataBuilder = new MediaMetadataCompat.Builder();
+		metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_TITLE, "Audio Recording");
+		metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "Audio Recorder");
+		metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, -1); // Unknown duration
+		mediaSession.setMetadata(metadataBuilder.build());
+		
+		// Set PlaybackState to indicate we're actively playing
+		PlaybackStateCompat.Builder stateBuilder = new PlaybackStateCompat.Builder();
+		stateBuilder.setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE | 
+							   PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS);
+		stateBuilder.setState(PlaybackStateCompat.STATE_PLAYING, 0, 1.0f);
+		mediaSession.setPlaybackState(stateBuilder.build());
+		
+		// Connect MediaButtonReceiver to handle system-level media button events
+		ComponentName mediaButtonReceiver = new ComponentName(this, VolumeButtonReceiver.class);
+		Intent mediaButtonIntent = new Intent(Intent.ACTION_MEDIA_BUTTON);
+		mediaButtonIntent.setComponent(mediaButtonReceiver);
+		PendingIntent mediaButtonPendingIntent = PendingIntent.getBroadcast(this, 0, mediaButtonIntent, 
+			PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+		mediaSession.setMediaButtonReceiver(mediaButtonPendingIntent);
+		
+		VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.initializeMediaSession", 
+			"MediaSession configured with metadata, playback state, and MediaButtonReceiver");
+		
+		// Update MediaSession state based on preference
+		updateMediaSessionState();
+	}
+	
+	/**
+	 * Check if volume button navigation is enabled in preferences
+	 */
+	private boolean isVolumeNavigationEnabled() {
+		// Get preferences from ARApplication
+		return ARApplication.getInjector().providePrefs(getApplicationContext()).isVolumeButtonNavigationEnabled();
+	}
+	
+	/**
+	 * Update MediaSession active state based on preference
+	 */
+	private void updateMediaSessionState() {
+		if (mediaSession != null) {
+			boolean enabled = isVolumeNavigationEnabled();
+			VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.updateMediaSessionState", 
+				String.format("Setting MediaSession active: %s", enabled));
+			mediaSession.setActive(enabled);
+		}
+	}
+	
+	/**
+	 * Send broadcast to MainActivity for timestamp navigation
+	 */
+	private void sendTimestampNavigationBroadcast(String action) {
+		VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.sendTimestampNavigationBroadcast", 
+			String.format("Sending broadcast: %s", action));
+		Intent intent = new Intent(action);
+		sendBroadcast(intent);
+		Timber.d("Sent timestamp navigation broadcast: " + action);
+	}
+	
+	/**
+	 * Public method to update MediaSession state when preferences change
+	 * Can be called from MainActivity when preference is toggled
+	 */
+	public void refreshVolumeNavigationState() {
+		updateMediaSessionState();
+	}
+	
+	/**
+	 * Direct timestamp navigation methods for when screen is locked
+	 */
+	
+	/**
+	 * Navigate to next timestamp (Volume Down when locked)
+	 */
+	private void navigateToNextTimestamp() {
+		VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToNextTimestamp", "Starting next timestamp navigation");
+		
+		// Get current playback position
+		long currentPosition = audioPlayer.getPauseTime();
+		VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToNextTimestamp", 
+			String.format("Current position: %d ms", currentPosition));
+		
+		// Get current active record
+		final Record record = recordDataSource.getActiveRecord();
+		if (record == null) {
+			VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToNextTimestamp", "No active record found");
+			return;
+		}
+		
+		// Load timestamps for current record
+		final List<Timestamp> timestamps = localRepository.getTimestampsForRecord(record.getId());
+		if (timestamps == null || timestamps.isEmpty()) {
+			VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToNextTimestamp", 
+				String.format("No timestamps found for record %d", record.getId()));
+			return;
+		}
+		
+		// Find next timestamp after current position
+		Timestamp nextTimestamp = null;
+		for (Timestamp timestamp : timestamps) {
+			if (timestamp.getTimeMillis() > currentPosition) {
+				nextTimestamp = timestamp;
+				break;
+			}
+		}
+		
+		if (nextTimestamp != null) {
+			long seekPosition = nextTimestamp.getTimeMillis();
+			VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToNextTimestamp", 
+				String.format("Seeking to next timestamp at %d ms", seekPosition));
+			audioPlayer.seek(seekPosition);
+		} else {
+			VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToNextTimestamp", 
+				String.format("No more timestamps after current position %d ms", currentPosition));
+		}
+	}
+	
+	/**
+	 * Navigate to previous timestamp (Volume Up when locked)
+	 */
+	private void navigateToPreviousTimestamp() {
+		VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToPreviousTimestamp", "Starting previous timestamp navigation");
+		
+		// Get current playback position
+		long currentPosition = audioPlayer.getPauseTime();
+		VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToPreviousTimestamp", 
+			String.format("Current position: %d ms", currentPosition));
+		
+		// Get current active record
+		final Record record = recordDataSource.getActiveRecord();
+		if (record == null) {
+			VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToPreviousTimestamp", "No active record found");
+			return;
+		}
+		
+		// Load timestamps for current record
+		final List<Timestamp> timestamps = localRepository.getTimestampsForRecord(record.getId());
+		if (timestamps == null || timestamps.isEmpty()) {
+			VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToPreviousTimestamp", 
+				String.format("No timestamps found for record %d", record.getId()));
+			return;
+		}
+		
+		// Find previous timestamp before current position (search in reverse)
+		Timestamp previousTimestamp = null;
+		for (int i = timestamps.size() - 1; i >= 0; i--) {
+			Timestamp timestamp = timestamps.get(i);
+			if (timestamp.getTimeMillis() < currentPosition) {
+				previousTimestamp = timestamp;
+				break;
+			}
+		}
+		
+		if (previousTimestamp != null) {
+			long seekPosition = previousTimestamp.getTimeMillis();
+			VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToPreviousTimestamp", 
+				String.format("Seeking to previous timestamp at %d ms", seekPosition));
+			audioPlayer.seek(seekPosition);
+		} else {
+			VolumeDebugLogger.log(getApplicationContext(), "PlaybackService.navigateToPreviousTimestamp", 
+				String.format("No timestamps before current position %d ms", currentPosition));
 		}
 	}
 

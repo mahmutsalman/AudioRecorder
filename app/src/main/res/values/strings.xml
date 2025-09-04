@@ -309,4 +309,16 @@
 	<string name="loop_enabled">Loop enabled</string>
 	<string name="loop_disabled">Loop disabled</string>
 	<string name="invalid_time_format">Invalid time format</string>
+	<string name="volume_button_navigation">Volume Button Navigation</string>
+	<string name="volume_nav_enabled">Volume buttons now control timestamp navigation</string>
+	<string name="volume_nav_disabled">Volume buttons restored to normal volume control</string>
+	
+	<!-- Debug Logs -->
+	<string name="debug_logs">Debug Logs</string>
+	<string name="debug_logs_title">Volume Button Debug Logs</string>
+	<string name="debug_logs_empty">No debug logs yet. Press volume buttons to generate logs.</string>
+	<string name="clear_logs">Clear Logs</string>
+	<string name="copy_logs">Copy to Clipboard</string>
+	<string name="logs_copied">Debug logs copied to clipboard</string>
+	<string name="close">Close</string>
 </resources>

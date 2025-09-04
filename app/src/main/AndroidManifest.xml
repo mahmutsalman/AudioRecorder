@@ -117,6 +117,23 @@
         <receiver android:name=".app.DownloadService$StopDownloadReceiver" />
         <receiver android:name=".app.DecodeService$StopDecodeReceiver" />
         <receiver android:name=".app.moverecords.MoveRecordsService$StopMoveRecordsReceiver" />
+        
+        <!-- Volume Button Receiver for handling media buttons when screen is locked -->
+        <receiver android:name=".app.VolumeButtonReceiver"
+                  android:exported="true">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+        
+        <!-- Timestamp Navigation Receiver for handling timestamp navigation broadcasts when screen is locked -->
+        <receiver android:name=".app.TimestampNavigationReceiver"
+                  android:exported="false">
+            <intent-filter>
+                <action android:name="com.dimowner.audiorecorder.ACTION_NEXT_TIMESTAMP" />
+                <action android:name="com.dimowner.audiorecorder.ACTION_PREVIOUS_TIMESTAMP" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name=".AppFileProvider"

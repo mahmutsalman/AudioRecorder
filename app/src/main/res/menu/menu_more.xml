@@ -27,5 +27,14 @@
 			android:id="@+id/menu_delete"
 			android:icon="@drawable/ic_delete_forever"
 			android:title="@string/delete" />
+	<item
+			android:id="@+id/menu_volume_nav"
+			android:icon="@drawable/ic_navigation"
+			android:title="@string/volume_button_navigation"
+			android:checkable="true" />
+	<item
+			android:id="@+id/menu_debug_logs"
+			android:icon="@drawable/ic_info"
+			android:title="@string/debug_logs" />
 
 </menu>

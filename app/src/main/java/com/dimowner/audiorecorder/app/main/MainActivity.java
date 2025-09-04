@@ -23,6 +23,8 @@ import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -30,6 +32,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.view.KeyEvent;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.WindowManager;
@@ -42,6 +45,10 @@ import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.app.AlertDialog;
+import android.text.method.ScrollingMovementMethod;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -72,6 +79,7 @@ import com.dimowner.audiorecorder.util.AnimationUtil;
 import com.dimowner.audiorecorder.util.DebugLogger;
 import com.dimowner.audiorecorder.util.FileUtil;
 import com.dimowner.audiorecorder.util.TimeUtils;
+import com.dimowner.audiorecorder.util.VolumeDebugLogger;
 
 import java.io.File;
 import java.util.List;
@@ -130,6 +138,11 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	private ColorMap colorMap;
 	private FileRepository fileRepository;
 	private ColorMap.OnThemeColorChangeListener onThemeColorChangeListener;
+	private boolean isVolumeButtonNavigationEnabled = false;
+	
+	// BroadcastReceiver for timestamp navigation when screen is locked
+	private BroadcastReceiver timestampNavigationReceiver;
+	private IntentFilter timestampNavigationFilter;
 
 	private final ServiceConnection connection = new ServiceConnection() {
 
@@ -262,6 +275,9 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 
 		presenter = ARApplication.getInjector().provideMainPresenter(getApplicationContext());
 		fileRepository = ARApplication.getInjector().provideFileRepository(getApplicationContext());
+		
+		// Load volume button navigation preference
+		isVolumeButtonNavigationEnabled = ARApplication.getInjector().providePrefs(getApplicationContext()).isVolumeButtonNavigationEnabled();
 
 		waveformView.setOnSeekListener(new WaveformViewNew.OnSeekListener() {
 			@Override
@@ -318,6 +334,9 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		handleRecordIntent(getIntent());
 		
 		checkNotificationPermission();
+		
+		// Initialize BroadcastReceiver for timestamp navigation when screen is locked
+		initializeTimestampNavigationReceiver();
 	}
 
 	@Override
@@ -346,11 +365,66 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 			presenter.unbindView();
 		}
 	}
+	
+	@Override
+	protected void onResume() {
+		super.onResume();
+		// Register BroadcastReceiver for timestamp navigation when screen is locked
+		if (timestampNavigationReceiver != null && timestampNavigationFilter != null) {
+			registerReceiver(timestampNavigationReceiver, timestampNavigationFilter);
+		}
+	}
+	
+	@Override
+	protected void onPause() {
+		super.onPause();
+		// Unregister BroadcastReceiver to avoid memory leaks
+		if (timestampNavigationReceiver != null) {
+			try {
+				unregisterReceiver(timestampNavigationReceiver);
+			} catch (IllegalArgumentException e) {
+				// Receiver might not be registered, ignore
+			}
+		}
+	}
 
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
 		colorMap.removeOnThemeColorChangeListener(onThemeColorChangeListener);
+	}
+
+	@Override
+	public boolean onKeyDown(int keyCode, KeyEvent event) {
+		// Log all key events for debugging
+		if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+			String keyName = keyCode == KeyEvent.KEYCODE_VOLUME_UP ? "VOLUME_UP" : "VOLUME_DOWN";
+			VolumeDebugLogger.log(this, "MainActivity.onKeyDown", 
+				String.format("Key: %s | VolumeNav: %s", keyName, isVolumeButtonNavigationEnabled));
+		}
+		
+		// Handle volume button navigation if enabled
+		if (isVolumeButtonNavigationEnabled) {
+			switch (keyCode) {
+				case KeyEvent.KEYCODE_VOLUME_UP:
+					// Volume Up = Previous timestamp
+					VolumeDebugLogger.log(this, "MainActivity.onKeyDown", "Executing Previous Timestamp");
+					presenter.onPreviousTimestampClick();
+					return true; // Consume the event to prevent default volume behavior
+				case KeyEvent.KEYCODE_VOLUME_DOWN:
+					// Volume Down = Next timestamp
+					VolumeDebugLogger.log(this, "MainActivity.onKeyDown", "Executing Next Timestamp");
+					presenter.onNextTimestampClick();
+					return true; // Consume the event to prevent default volume behavior
+			}
+		} else {
+			// Log when volume navigation is disabled
+			if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+				VolumeDebugLogger.log(this, "MainActivity.onKeyDown", "Volume navigation disabled - using default behavior");
+			}
+		}
+		// If not handling volume navigation or different key, use default behavior
+		return super.onKeyDown(keyCode, event);
 	}
 
 	@Override
@@ -1020,11 +1094,33 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 				);
 			} else if (id == R.id.menu_delete) {
 				presenter.onDeleteClick();
+			} else if (id == R.id.menu_volume_nav) {
+				// Toggle volume button navigation
+				isVolumeButtonNavigationEnabled = !isVolumeButtonNavigationEnabled;
+				ARApplication.getInjector().providePrefs(getApplicationContext()).setVolumeButtonNavigationEnabled(isVolumeButtonNavigationEnabled);
+				
+				// Notify PlaybackService about preference change
+				Intent refreshIntent = new Intent(MainActivity.this, PlaybackService.class);
+				refreshIntent.setAction(PlaybackService.ACTION_REFRESH_VOLUME_NAV);
+				startService(refreshIntent);
+				
+				// Show toast message
+				String message = isVolumeButtonNavigationEnabled ? 
+					getString(R.string.volume_nav_enabled) : 
+					getString(R.string.volume_nav_disabled);
+				Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
+			} else if (id == R.id.menu_debug_logs) {
+				// Show debug logs dialog
+				showDebugLogsDialog();
 			}
 			return false;
 		});
 		MenuInflater inflater = popup.getMenuInflater();
 		inflater.inflate(R.menu.menu_more, popup.getMenu());
+		
+		// Set the checked state of volume navigation menu item
+		popup.getMenu().findItem(R.id.menu_volume_nav).setChecked(isVolumeButtonNavigationEnabled);
+		
 		AndroidUtils.insertMenuItemIcons(v.getContext(), popup);
 		popup.show();
 	}
@@ -1172,6 +1268,91 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 		} else if (requestCode == REQ_CODE_POST_NOTIFICATIONS && grantResults.length > 0
 				&& grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 			//Post notifications permission is granted do nothing
+		}
+	}
+	
+	/**
+	 * Initialize BroadcastReceiver for timestamp navigation when screen is locked
+	 */
+	private void initializeTimestampNavigationReceiver() {
+		// Create IntentFilter for timestamp navigation broadcasts
+		timestampNavigationFilter = new IntentFilter();
+		timestampNavigationFilter.addAction(PlaybackService.ACTION_NEXT_TIMESTAMP);
+		timestampNavigationFilter.addAction(PlaybackService.ACTION_PREVIOUS_TIMESTAMP);
+		
+		// Create BroadcastReceiver to handle timestamp navigation
+		timestampNavigationReceiver = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				String action = intent.getAction();
+				VolumeDebugLogger.log(context, "MainActivity.BroadcastReceiver", 
+					String.format("Received broadcast: %s", action != null ? action : "null"));
+				
+				if (action != null) {
+					switch (action) {
+						case PlaybackService.ACTION_NEXT_TIMESTAMP:
+							// Handle next timestamp navigation (Volume Down pressed when locked)
+							VolumeDebugLogger.log(context, "MainActivity.BroadcastReceiver", "Executing Next Timestamp from broadcast");
+							if (presenter != null) {
+								presenter.onNextTimestampClick();
+							}
+							break;
+						case PlaybackService.ACTION_PREVIOUS_TIMESTAMP:
+							// Handle previous timestamp navigation (Volume Up pressed when locked) 
+							VolumeDebugLogger.log(context, "MainActivity.BroadcastReceiver", "Executing Previous Timestamp from broadcast");
+							if (presenter != null) {
+								presenter.onPreviousTimestampClick();
+							}
+							break;
+					}
+				}
+			}
+		};
+	}
+	
+	/**
+	 * Show debug logs dialog for volume button troubleshooting
+	 */
+	private void showDebugLogsDialog() {
+		// Create scrollable TextView for logs
+		TextView logTextView = new TextView(this);
+		logTextView.setText(VolumeDebugLogger.getAllLogs());
+		logTextView.setTextSize(10);
+		logTextView.setPadding(20, 20, 20, 20);
+		logTextView.setMovementMethod(new ScrollingMovementMethod());
+		logTextView.setTextIsSelectable(true);
+		
+		// Create AlertDialog
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.debug_logs_title);
+		builder.setView(logTextView);
+		
+		// Add buttons
+		builder.setPositiveButton(R.string.close, null);
+		
+		builder.setNeutralButton(R.string.clear_logs, (dialog, which) -> {
+			VolumeDebugLogger.clearLogs();
+			Toast.makeText(this, "Debug logs cleared", Toast.LENGTH_SHORT).show();
+		});
+		
+		builder.setNegativeButton(R.string.copy_logs, (dialog, which) -> {
+			ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+			ClipData clip = ClipData.newPlainText("Debug Logs", VolumeDebugLogger.getAllLogs());
+			if (clipboard != null) {
+				clipboard.setPrimaryClip(clip);
+				Toast.makeText(this, R.string.logs_copied, Toast.LENGTH_SHORT).show();
+			}
+		});
+		
+		AlertDialog dialog = builder.create();
+		dialog.show();
+		
+		// Make the dialog larger for better readability
+		if (dialog.getWindow() != null) {
+			dialog.getWindow().setLayout(
+				(int) (getResources().getDisplayMetrics().widthPixels * 0.9),
+				(int) (getResources().getDisplayMetrics().heightPixels * 0.7)
+			);
 		}
 	}
 }

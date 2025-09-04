@@ -75,5 +75,8 @@ public interface Prefs {
 	void setSettingChannelCount(int count);
 	int getSettingChannelCount();
 
+	void setVolumeButtonNavigationEnabled(boolean enabled);
+	boolean isVolumeButtonNavigationEnabled();
+
 	void resetSettings();
 }

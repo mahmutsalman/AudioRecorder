@@ -57,6 +57,7 @@ public class PrefsImpl implements Prefs {
 	private static final String PREF_KEY_SETTING_NAMING_FORMAT = "setting_naming_format";
 	private static final String PREF_KEY_SETTING_CHANNEL_COUNT = "setting_channel_count";
 	private static final String PREF_KEY_PLAYBACK_SPEED = "playback_speed";
+	private static final String PREF_KEY_VOLUME_BUTTON_NAV = "volume_button_navigation";
 
 	private final SharedPreferences sharedPreferences;
 
@@ -406,6 +407,18 @@ public class PrefsImpl implements Prefs {
 	@Override
 	public float getPlaybackSpeed() {
 		return sharedPreferences.getFloat(PREF_KEY_PLAYBACK_SPEED, 1.0f);
+	}
+
+	@Override
+	public void setVolumeButtonNavigationEnabled(boolean enabled) {
+		SharedPreferences.Editor editor = sharedPreferences.edit();
+		editor.putBoolean(PREF_KEY_VOLUME_BUTTON_NAV, enabled);
+		editor.apply();
+	}
+
+	@Override
+	public boolean isVolumeButtonNavigationEnabled() {
+		return sharedPreferences.getBoolean(PREF_KEY_VOLUME_BUTTON_NAV, false);
 	}
 
 	@Override

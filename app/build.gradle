@@ -111,6 +111,9 @@ dependencies {
 
 	//Material Design
 	implementation "com.google.android.material:material:1.11.0"
+	
+	//Media support for volume button handling when screen is locked
+	implementation "androidx.media:media:1.6.0"
 
 	testImplementation("junit:junit:4.13.2")
 	testImplementation("io.mockk:mockk:1.13.10")
