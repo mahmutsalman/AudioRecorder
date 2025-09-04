@@ -939,7 +939,7 @@ public class MainActivity extends Activity implements MainContract.View, View.On
 	public void showLoopEnabled(long startTime, long endTime) {
 		runOnUiThread(() -> {
 			// Change loop button appearance to indicate active state
-			btnLoop.setColorFilter(getResources().getColor(R.color.md_purple_500));
+			btnLoop.setColorFilter(getResources().getColor(R.color.md_blue_gray_800));
 			showMessage(R.string.loop_enabled);
 		});
 	}

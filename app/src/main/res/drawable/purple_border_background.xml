@@ -5,10 +5,10 @@
     <!-- Transparent background -->
     <solid android:color="@color/transparent" />
     
-    <!-- Purple border -->
+    <!-- Dark blue-gray border -->
     <stroke
         android:width="2dp"
-        android:color="@color/md_purple_500" />
+        android:color="@color/md_blue_gray_800" />
     
     <!-- Rounded corners -->
     <corners android:radius="8dp" />
